@@ -231,11 +231,31 @@
   <script>
     // Feste Assets (immer drin)
     const ASSETS = [
-      { id:'col',  name:'All Colognians Are Beautiful', file:'assets/all-colognians-are-beautiful.svg', colorMode:'editable' },
-      { id:'hood', name:'Hoodstuff Logo',              file:'assets/hoodstufff-logo.svg',             colorMode:'editable' },
-      { id:'plz',  name:'PLZ Rauten',                  file:'assets/plz-rauten.svg',                 colorMode:'editable' },
-      { id:'qr',   name:'QR Code',                     file:'assets/qr-code.svg',                    colorMode:'editable' }
-    ];
+  {
+    id: 'col',
+    name: 'All Colognians Are Beautiful',
+    url: 'https://raw.githubusercontent.com/muyuubyuyu/hoodstuff-designer/7a891aa4d384df063a33182b0b53c695c46e962c/assets/all-colognians-are-beautiful.svg',
+    colorMode: 'editable'
+  },
+  {
+    id: 'hood',
+    name: 'Hoodstuff Logo',
+    url: 'https://raw.githubusercontent.com/muyuubyuyu/hoodstuff-designer/7a891aa4d384df063a33182b0b53c695c46e962c/assets/hoodstufff-logo.svg',
+    colorMode: 'editable'
+  },
+  {
+    id: 'plz',
+    name: 'PLZ Rauten',
+    url: 'https://raw.githubusercontent.com/muyuubyuyu/hoodstuff-designer/7a891aa4d384df063a33182b0b53c695c46e962c/assets/plz-rauten.svg',
+    colorMode: 'editable'
+  },
+  {
+    id: 'qr',
+    name: 'QR Code',
+    url: 'https://raw.githubusercontent.com/muyuubyuyu/hoodstuff-designer/7a891aa4d384df063a33182b0b53c695c46e962c/assets/qr-code.svg',
+    colorMode: 'editable'
+  }
+];
 
     const PX_PER_MM = 3.7795275591;
 
@@ -1243,13 +1263,13 @@
     }
 
     // Init
-    (async ()=>{
-      await loadAssetSvgs();
-      renderLibrary();
-      setCanvasSize(600,1000);
-      syncControls();
-      renderAll();
-    })();
+(async ()=>{
+  await loadAssets();   // ❗ war bei dir: loadAssetSvgs()
+  renderLibrary();
+  setCanvasSize(600,1000);
+  syncControls();
+  renderAll();
+})();
 
     try{
       const ok = runTests();
