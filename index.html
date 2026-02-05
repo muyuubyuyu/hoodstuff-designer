@@ -618,18 +618,13 @@
       return svgEl;
     }
 
-    async function loadAssets(){
-      await Promise.all(ASSETS.map(async (a)=>{
-        const src = a.file || a.url;
-        try{
-          const res = await fetch(src, { cache: 'no-cache' });
-          if(!res.ok) throw new Error('HTTP ' + res.status);
-          a.svg = await res.text();
-        }catch(err){
-          console.error('Asset load error', src, err);
-          a.svg = null;
-        }
-      }));
+async function loadAssets(){
+  await Promise.all(ASSETS.map(async (a)=>{
+    const res = await fetch(a.url); 
+    a.svg = await res.text();
+  }));
+}
+
     }
     const loadAssetSvgs = loadAssets;
 
