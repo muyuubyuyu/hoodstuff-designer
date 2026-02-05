@@ -109,6 +109,9 @@
       <div style="font-size:18px;font-weight:600;text-align:center">Drucklayout Tool Login</div>
       <input id="loginUser" type="text" placeholder="Nutzername" style="padding:10px;border-radius:10px;border:1px solid #2a3242;background:#0b0e13;color:#e7eaf0">
       <input id="loginPass" type="password" placeholder="Passwort" style="padding:10px;border-radius:10px;border:1px solid #2a3242;background:#0b0e13;color:#e7eaf0">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#a5adbd;user-select:none">
+        <input id="loginRemember" type="checkbox" style="width:14px;height:14px;accent-color:#6aa9ff"> Merken
+      </label>
       <button id="loginBtn" style="padding:10px;border-radius:12px;border:1px solid rgba(106,169,255,.4);background:rgba(106,169,255,.15);color:#e7eaf0;cursor:pointer">Login</button>
       <div id="loginError" style="font-size:12px;color:#ff5c5c;text-align:center;display:none">Falsche Zugangsdaten</div>
     </div>
@@ -239,13 +242,13 @@
   <script src="https://cdn.jsdelivr.net/npm/svg2pdf.js@2.2.3/dist/svg2pdf.umd.min.js"></script>
 
   <script>
-    // Placeholder assets
-    const ASSETS = [
-      { id: 'a1', name: 'Brust Logo klein', colorMode: 'editable', svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 40"><path d="M8 8h104v24H8z"/></svg>' },
-      { id: 'a2', name: 'Rücken groß 3 Zeilen', colorMode: 'editable', svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120"><path d="M10 10h180v18H10z"/><path d="M10 51h130v18H10z"/><path d="M10 92h160v18H10z"/></svg>' },
-      { id: 'a3', name: 'Mehrfarbig Beispiel (fix)', colorMode: 'fixed', svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60"><path fill="#ff3b3b" d="M10 10h40v40H10z"/><path fill="#3b82ff" d="M70 10h40v40H70z"/></svg>' },
-      { id: 'a4', name: 'Ärmel links', colorMode: 'editable', svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 40"><path d="M10 20c20-16 40-16 60 0s40 16 60 0v12c-20 16-40 16-60 0s-40-16-60 0z"/></svg>' }
-    ];
+    // Feste Assets (immer drin)
+const ASSETS = [
+  { id: 'hood',      name: 'Hoodstuff Logo',               colorMode: 'editable', url: 'assets/hoodstufff-logo.svg',              svg: null },
+  { id: 'colognians',name: 'All Colognians Are Beautiful',  colorMode: 'editable', url: 'assets/all-colognians-are-beautiful.svg', svg: null },
+  { id: 'rauten',    name: 'PLZ Rauten',                   colorMode: 'editable', url: 'assets/plz-rauten.svg',                 svg: null },
+  { id: 'qrcode',    name: 'QR Code',                      colorMode: 'editable', url: 'assets/qr-code.svg',                   svg: null }
+];
 
     const PX_PER_MM = 3.7795275591;
 
@@ -510,6 +513,65 @@ els.stageWrap.addEventListener('pointerdown', (e)=>{
       return doc.documentElement;
     }
 
+    function numAttr(el, name){
+      const v = (el.getAttribute(name) || '').toString().trim();
+      if(!v) return NaN;
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? n : NaN;
+    }
+
+    function ensureViewBox(svgEl){
+      const vb = (svgEl.getAttribute('viewBox') || '').trim();
+      if(vb) return;
+      const w = numAttr(svgEl,'width');
+      const h = numAttr(svgEl,'height');
+      if(Number.isFinite(w) && Number.isFinite(h) && w>0 && h>0){
+        svgEl.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+      }
+    }
+
+    function sanitizeEditableSvg(svgEl){
+      // Entfernt feste Fill/Stroke Farben, damit "Objektfarbe" sauber greift.
+      const walk = (node)=>{
+        if(node.nodeType!==1) return;
+        const el = node;
+        if(el.hasAttribute('fill')) el.removeAttribute('fill');
+        if(el.hasAttribute('stroke')) el.removeAttribute('stroke');
+        if(el.hasAttribute('stroke-width')) el.removeAttribute('stroke-width');
+
+        if(el.hasAttribute('style')){
+          const s = (el.getAttribute('style') || '').split(';').map(x=>x.trim()).filter(Boolean);
+          const keep = [];
+          for(const rule of s){
+            const low = rule.toLowerCase();
+            if(low.startsWith('fill:')) continue;
+            if(low.startsWith('stroke:')) continue;
+            if(low.startsWith('stroke-width:')) continue;
+            keep.push(rule);
+          }
+          if(keep.length) el.setAttribute('style', keep.join('; '));
+          else el.removeAttribute('style');
+        }
+
+        for(const ch of Array.from(el.children)) walk(ch);
+      };
+      walk(svgEl);
+      return svgEl;
+    }
+
+    async function loadAssets(){
+      await Promise.all(ASSETS.map(async (a)=>{
+        try{
+          const res = await fetch(a.url, { cache: 'no-cache' });
+          if(!res.ok) throw new Error('HTTP ' + res.status);
+          a.svg = await res.text();
+        }catch(err){
+          console.error('Asset load error', a.url, err);
+          a.svg = null;
+        }
+      }));
+    }
+
     function getViewBoxSize(svgEl){
       const vbRaw = (svgEl.getAttribute('viewBox') || '0 0 0 0').replaceAll(',', ' ');
       const parts = vbRaw.split(' ').filter(Boolean).map(Number);
@@ -522,20 +584,37 @@ els.stageWrap.addEventListener('pointerdown', (e)=>{
       for(const a of ASSETS){
         const tile = document.createElement('div');
         tile.className = 'tile';
-        tile.draggable = true;
+        tile.draggable = Boolean(a.svg);
+        tile.title = a.name;
 
         const thumb = document.createElement('div');
         thumb.className = 'thumb';
-        const svgEl = parseSvg(a.svg);
-        svgEl.removeAttribute('width');
-        svgEl.removeAttribute('height');
-        svgEl.setAttribute('width','100%');
-        svgEl.setAttribute('height','100%');
-        if(a.colorMode==='editable') svgEl.setAttribute('fill', state.editableFill);
-        thumb.appendChild(svgEl);
+
+        if(a.svg){
+          const svgEl = parseSvg(a.svg);
+      ensureViewBox(svgEl);
+      if(a.colorMode==='editable') sanitizeEditableSvg(svgEl);
+          ensureViewBox(svgEl);
+          if(a.colorMode==='editable') sanitizeEditableSvg(svgEl);
+
+          svgEl.removeAttribute('width');
+          svgEl.removeAttribute('height');
+          svgEl.setAttribute('width','100%');
+          svgEl.setAttribute('height','100%');
+          if(a.colorMode==='editable') svgEl.setAttribute('fill', state.editableFill);
+          thumb.appendChild(svgEl);
+        } else {
+          const ph = document.createElement('div');
+          ph.style.fontSize = '12px';
+          ph.style.color = 'var(--muted)';
+          ph.textContent = 'SVG nicht geladen';
+          thumb.appendChild(ph);
+        }
+
         tile.appendChild(thumb);
 
         tile.addEventListener('dragstart', (e)=>{
+          if(!a.svg) return;
           e.dataTransfer.setData('text/plain', a.id);
         });
 
@@ -1123,9 +1202,25 @@ const loginBtn = document.getElementById('loginBtn');
 const loginUser = document.getElementById('loginUser');
 const loginPass = document.getElementById('loginPass');
 const loginError = document.getElementById('loginError');
+const loginRemember = document.getElementById('loginRemember');
+
+const LOGIN_REMEMBER_KEY = 'hoodstuffDesignerRemember';
+// Auto-Login (Pseudo): wenn gemerkt, Overlay direkt ausblenden
+try{
+  if(localStorage.getItem(LOGIN_REMEMBER_KEY)==='1'){
+    loginOverlay.style.display = 'none';
+  }
+}catch(_){ }
 
 loginBtn.addEventListener('click', ()=>{
   if(loginUser.value === 'Tine' && loginPass.value === '#gehobenemittelschicht'){
+    // merken
+    try{
+      if(loginRemember && loginRemember.checked) localStorage.setItem(LOGIN_REMEMBER_KEY,'1');
+      else localStorage.removeItem(LOGIN_REMEMBER_KEY);
+    }catch(_){ }
+
+    loginError.style.display = 'none';
     loginOverlay.style.display = 'none';
   } else {
     loginError.style.display = 'block';
@@ -1137,10 +1232,13 @@ loginPass.addEventListener('keydown', (e)=>{
 });
 
 // Init
-    renderLibrary();
-    setCanvasSize(600,1000);
-    syncControls();
-    renderAll();
+    (async ()=>{
+      await loadAssets();
+      renderLibrary();
+      setCanvasSize(600,1000);
+      syncControls();
+      renderAll();
+    })();
 
     try{
       const ok = runTests();
