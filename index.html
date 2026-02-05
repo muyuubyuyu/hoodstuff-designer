@@ -244,10 +244,10 @@
   <script>
     // Feste Assets (immer drin)
 const ASSETS = [
-  { id: 'hood',      name: 'Hoodstuff Logo',               colorMode: 'editable', url: 'assets/hoodstufff-logo.svg',              svg: null },
-  { id: 'colognians',name: 'All Colognians Are Beautiful',  colorMode: 'editable', url: 'assets/all-colognians-are-beautiful.svg', svg: null },
-  { id: 'rauten',    name: 'PLZ Rauten',                   colorMode: 'editable', url: 'assets/plz-rauten.svg',                 svg: null },
-  { id: 'qrcode',    name: 'QR Code',                      colorMode: 'editable', url: 'assets/qr-code.svg',                   svg: null }
+  { id:'col',  name:'All Colognians Are Beautiful', file:'assets/all-colognians-are-beautiful.svg', colorMode:'editable' },
+  { id:'hood', name:'Hoodstuff Logo',              file:'assets/hoodstufff-logo.svg',             colorMode:'editable' },
+  { id:'plz',  name:'PLZ Rauten',                  file:'assets/plz-rauten.svg',                 colorMode:'editable' },
+  { id:'qr',   name:'QR Code',                     file:'assets/qr-code.svg',                    colorMode:'editable' }
 ];
 
     const PX_PER_MM = 3.7795275591;
@@ -1301,13 +1301,14 @@ loginPass.addEventListener('keydown', (e)=>{
 });
 
 // Init
-    (async ()=>{
-      await loadAssets();
-      renderLibrary();
-      setCanvasSize(600,1000);
-      syncControls();
-      renderAll();
-    })();
+(async ()=>{
+  await loadAssetSvgs();
+  renderLibrary();
+  setCanvasSize(600,1000);
+  syncControls();
+  renderAll();
+})();
+
 
     try{
       const ok = runTests();
