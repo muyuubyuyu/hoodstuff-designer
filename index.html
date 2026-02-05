@@ -103,6 +103,17 @@
 </head>
 <body>
 
+  <!-- Login Overlay -->
+  <div id="loginOverlay" style="position:fixed;inset:0;background:#0f1115;display:flex;align-items:center;justify-content:center;z-index:9999;">
+    <div style="background:#151a22;border:1px solid #2a3242;border-radius:16px;padding:28px;width:320px;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 60px rgba(0,0,0,.6)">
+      <div style="font-size:18px;font-weight:600;text-align:center">Hoodstuff Drucklayout Tool Admin Login</div>
+      <input id="loginUser" type="text" placeholder="Nutzername" style="padding:10px;border-radius:10px;border:1px solid #2a3242;background:#0b0e13;color:#e7eaf0">
+      <input id="loginPass" type="password" placeholder="Passwort" style="padding:10px;border-radius:10px;border:1px solid #2a3242;background:#0b0e13;color:#e7eaf0">
+      <button id="loginBtn" style="padding:10px;border-radius:12px;border:1px solid rgba(106,169,255,.4);background:rgba(106,169,255,.15);color:#e7eaf0;cursor:pointer">Login</button>
+      <div id="loginError" style="font-size:12px;color:#ff5c5c;text-align:center;display:none">Falsche Zugangsdaten</div>
+    </div>
+  </div>
+
   <div class="app">
     <div class="topbar">
       <div class="group chip">
@@ -229,33 +240,33 @@
   <script src="https://cdn.jsdelivr.net/npm/svg2pdf.js@2.2.3/dist/svg2pdf.umd.min.js"></script>
 
   <script>
-    // Feste Assets (immer drin)
+    // Assets (SVG-Dateien aus /assets laden)
+    // Repo-Struktur:
+    //  index.html
+    //  assets/
+    //    all-colognians-are-beautiful.svg
+    //    hoodstufff-logo.svg
+    //    plz-rauten.svg
     const ASSETS = [
-  {
-    id: 'col',
-    name: 'All Colognians Are Beautiful',
-    url: 'https://raw.githubusercontent.com/muyuubyuyu/hoodstuff-designer/7a891aa4d384df063a33182b0b53c695c46e962c/assets/all-colognians-are-beautiful.svg',
-    colorMode: 'editable'
-  },
-  {
-    id: 'hood',
-    name: 'Hoodstuff Logo',
-    url: 'https://raw.githubusercontent.com/muyuubyuyu/hoodstuff-designer/7a891aa4d384df063a33182b0b53c695c46e962c/assets/hoodstufff-logo.svg',
-    colorMode: 'editable'
-  },
-  {
-    id: 'plz',
-    name: 'PLZ Rauten',
-    url: 'https://raw.githubusercontent.com/muyuubyuyu/hoodstuff-designer/7a891aa4d384df063a33182b0b53c695c46e962c/assets/plz-rauten.svg',
-    colorMode: 'editable'
-  },
-  {
-    id: 'qr',
-    name: 'QR Code',
-    url: 'https://raw.githubusercontent.com/muyuubyuyu/hoodstuff-designer/7a891aa4d384df063a33182b0b53c695c46e962c/assets/qr-code.svg',
-    colorMode: 'editable'
-  }
-];
+      { id:'col',  name:'All Colognians Are Beautiful', file:'assets/all-colognians-are-beautiful.svg', colorMode:'editable' },
+      { id:'hood', name:'Hoodstuff Logo',              file:'assets/hoodstufff-logo.svg',             colorMode:'editable' },
+      { id:'plz',  name:'PLZ Rauten',                  file:'assets/plz-rauten.svg',                 colorMode:'editable' }
+    ];
+
+    async function loadAssetSvgs(){
+      for(const a of ASSETS){
+        try{
+          const res = await fetch(a.file, { cache:'no-store' });
+          if(!res.ok) throw new Error('HTTP ' + res.status);
+          a.svg = await res.text();
+        } catch(err){
+          console.warn('Asset konnte nicht geladen werden:', a.file, err);
+          a.svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60"><rect x="6" y="6" width="108" height="48" rx="10" ry="10" fill="none" stroke="#ff5c5c" stroke-width="4"/><path d="M18 42 L48 18 L68 38 L102 14" fill="none" stroke="#ff5c5c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+          a.colorMode = 'fixed';
+          a.name = a.name + ' (fehlt)';
+        }
+      }
+    }
 
     const PX_PER_MM = 3.7795275591;
 
@@ -355,7 +366,6 @@
       renderAll();
     }
 
-    // ===== Canvas size =====
     function setCanvasSize(wMm, hMm){
       state.canvas.w = wMm;
       state.canvas.h = hMm;
@@ -371,7 +381,6 @@
       updateWarnings();
     }
 
-    // ===== Zoom =====
     function applyZoom(z){
       state.zoom = clamp(z, 0.05, 8.0);
       const pct = Math.round(state.zoom*100);
@@ -382,9 +391,8 @@
 
       els.canvasSvg.style.width = wPx + 'px';
       els.canvasSvg.style.height = hPx + 'px';
-
-      els.stageBg.style.width = '';
-      els.stageBg.style.height = '';
+      els.stageBg.style.width = wPx + 'px';
+      els.stageBg.style.height = hPx + 'px';
 
       els.gridOverlay.style.width = wPx + 'px';
       els.gridOverlay.style.height = hPx + 'px';
@@ -405,7 +413,6 @@
     els.zoomIn.addEventListener('click', ()=> applyZoom(state.zoom*1.25));
     els.zoomReset.addEventListener('click', ()=> applyZoom(1));
 
-    // Wheel zoom over canvas
     els.stageWrap.addEventListener('wheel', (e)=>{
       const canvasRect = els.canvasSvg.getBoundingClientRect();
       const overCanvas = e.clientX>=canvasRect.left && e.clientX<=canvasRect.right && e.clientY>=canvasRect.top && e.clientY<=canvasRect.bottom;
@@ -415,7 +422,6 @@
       applyZoom(state.zoom * factor);
     }, { passive:false });
 
-    // ===== PAN (reliable): SHIFT + Linksklick halten & ziehen =====
     let pan = null;
 
     function isOverCanvas(clientX, clientY){
@@ -443,7 +449,7 @@
 
       e.preventDefault();
       e.stopPropagation();
-      try{ els.stageWrap.setPointerCapture(e.pointerId); }catch(_){ }
+      try{ els.stageWrap.setPointerCapture(e.pointerId); }catch(_){}
     }, true);
 
     els.stageWrap.addEventListener('pointermove', (e)=>{
@@ -452,7 +458,6 @@
 
       const dx = e.clientX - pan.x;
       const dy = e.clientY - pan.y;
-
       els.stageWrap.scrollLeft = pan.sl + dx;
       els.stageWrap.scrollTop  = pan.st + dy;
 
@@ -469,7 +474,6 @@
     els.stageWrap.addEventListener('pointercancel', endPan);
     els.stageWrap.addEventListener('lostpointercapture', endPan);
 
-    // ===== Overlays =====
     function drawGrid(){
       els.gridOverlay.classList.toggle('on', state.gridOn);
       if(!state.gridOn) return;
@@ -509,124 +513,11 @@
       ctx.setLineDash([]);
     }
 
-    // ===== SVG utils =====
     function parseSvg(svgString){
       const parser = new DOMParser();
       const doc = parser.parseFromString(svgString, 'image/svg+xml');
       return doc.documentElement;
     }
-
-    function namespaceSvgElement(svgEl, prefix){
-      if(!svgEl || svgEl.nodeName.toLowerCase() !== 'svg') return;
-
-      const map = new Map();
-      const all = svgEl.querySelectorAll('[id]');
-      for(const el of all){
-        const id = el.getAttribute('id');
-        if(!id) continue;
-        if(id.startsWith(prefix + '_')) continue;
-        const nid = prefix + '_' + id;
-        map.set(id, nid);
-        el.setAttribute('id', nid);
-      }
-      if(map.size === 0) return;
-
-      const rewriteVal = (val)=>{
-        if(!val) return val;
-        let out = val;
-        for(const [oldId, newId] of map){
-          out = out.split('url(#' + oldId + ')').join('url(#' + newId + ')');
-          out = out.split('#' + oldId).join('#' + newId);
-        }
-        return out;
-      };
-
-      const elems = svgEl.querySelectorAll('*');
-      for(const el of elems){
-        for(const attr of Array.from(el.attributes || [])){
-          const v = attr.value;
-          if(!v) continue;
-          if(v.includes('url(#') || v.includes('#')){
-            const nv = rewriteVal(v);
-            if(nv !== v) el.setAttribute(attr.name, nv);
-          }
-        }
-        if(el.hasAttribute('style')){
-          const sv = el.getAttribute('style');
-          const nv = rewriteVal(sv);
-          if(nv !== sv) el.setAttribute('style', nv);
-        }
-      }
-
-      const styleTags = svgEl.querySelectorAll('style');
-      for(const st of styleTags){
-        const txt = st.textContent || '';
-        const ntxt = rewriteVal(txt);
-        if(ntxt !== txt) st.textContent = ntxt;
-      }
-    }
-
-    function numAttr(el, name){
-      const v = (el.getAttribute(name) || '').toString().trim();
-      if(!v) return NaN;
-      const n = parseFloat(v);
-      return Number.isFinite(n) ? n : NaN;
-    }
-
-    function ensureViewBox(svgEl){
-      const vb = (svgEl.getAttribute('viewBox') || '').trim();
-      if(vb) return;
-      const w = numAttr(svgEl,'width');
-      const h = numAttr(svgEl,'height');
-      if(Number.isFinite(w) && Number.isFinite(h) && w>0 && h>0){
-        svgEl.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
-      }
-    }
-
-    function sanitizeEditableSvg(svgEl){
-      const walk = (node)=>{
-        if(node.nodeType!==1) return;
-        const el = node;
-
-        if(el.hasAttribute('fill')){
-          const fv = (el.getAttribute('fill') || '').trim().toLowerCase();
-          if(fv && fv !== 'none') el.removeAttribute('fill');
-        }
-        if(el.hasAttribute('stroke')){
-          const sv = (el.getAttribute('stroke') || '').trim().toLowerCase();
-          if(sv && sv !== 'none') el.removeAttribute('stroke');
-        }
-        if(el.hasAttribute('stroke-width')) el.removeAttribute('stroke-width');
-
-        if(el.hasAttribute('style')){
-          const s = (el.getAttribute('style') || '').split(';').map(x=>x.trim()).filter(Boolean);
-          const keep = [];
-          for(const rule of s){
-            const low = rule.toLowerCase();
-            if(low.startsWith('fill:') && !low.startsWith('fill:none')) continue;
-            if(low.startsWith('stroke:') && !low.startsWith('stroke:none')) continue;
-            if(low.startsWith('stroke-width:')) continue;
-            keep.push(rule);
-          }
-          if(keep.length) el.setAttribute('style', keep.join('; '));
-          else el.removeAttribute('style');
-        }
-
-        for(const ch of Array.from(el.children)) walk(ch);
-      };
-      walk(svgEl);
-      return svgEl;
-    }
-
-async function loadAssets(){
-  await Promise.all(ASSETS.map(async (a)=>{
-    const res = await fetch(a.url); 
-    a.svg = await res.text();
-  }));
-}
-
-    }
-    const loadAssetSvgs = loadAssets;
 
     function getViewBoxSize(svgEl){
       const vbRaw = (svgEl.getAttribute('viewBox') || '0 0 0 0').replaceAll(',', ' ');
@@ -634,42 +525,26 @@ async function loadAssets(){
       return { w: parts[2] || 0, h: parts[3] || 0 };
     }
 
-    // ===== Library =====
     function renderLibrary(){
       els.library.innerHTML = '';
       for(const a of ASSETS){
         const tile = document.createElement('div');
         tile.className = 'tile';
-        tile.draggable = Boolean(a.svg);
-        tile.title = a.name;
+        tile.draggable = true;
 
         const thumb = document.createElement('div');
         thumb.className = 'thumb';
 
-        if(a.svg){
-          const svgEl = parseSvg(a.svg);
-          ensureViewBox(svgEl);
-          namespaceSvgElement(svgEl, 'lib_' + a.id);
-          if(a.colorMode==='editable') sanitizeEditableSvg(svgEl);
-
-          svgEl.removeAttribute('width');
-          svgEl.removeAttribute('height');
-          svgEl.setAttribute('width','100%');
-          svgEl.setAttribute('height','100%');
-          if(a.colorMode==='editable') svgEl.setAttribute('fill', state.editableFill);
-          thumb.appendChild(svgEl);
-        } else {
-          const ph = document.createElement('div');
-          ph.style.fontSize = '12px';
-          ph.style.color = 'var(--muted)';
-          ph.textContent = 'SVG nicht geladen';
-          thumb.appendChild(ph);
-        }
-
+        const svgEl = parseSvg(a.svg || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60"><path d="M8 8h104v44H8z"/></svg>');
+        svgEl.removeAttribute('width');
+        svgEl.removeAttribute('height');
+        svgEl.setAttribute('width','100%');
+        svgEl.setAttribute('height','100%');
+        if(a.colorMode==='editable') svgEl.setAttribute('fill', state.editableFill);
+        thumb.appendChild(svgEl);
         tile.appendChild(thumb);
 
         tile.addEventListener('dragstart', (e)=>{
-          if(!a.svg) return;
           e.dataTransfer.setData('text/plain', a.id);
         });
 
@@ -677,7 +552,6 @@ async function loadAssets(){
       }
     }
 
-    // ===== Geometry / bounds =====
     function getItemBBox(it){
       return { x: it.x, y: it.y, w: it.w0 * it.scale, h: it.h0 * it.scale };
     }
@@ -735,25 +609,15 @@ async function loadAssets(){
       return state.items.reduce((m,it)=>Math.max(m, it.z||0), 0) + 1;
     }
 
-    // ===== Canvas items =====
     function addAssetToCanvas(assetId, x, y){
       const a = ASSETS.find(v=>v.id===assetId);
-      if(!a || !a.svg) return;
+      if(!a) return;
       pushHistory();
 
-      const id = uid();
       const svgEl = parseSvg(a.svg);
-      ensureViewBox(svgEl);
-      namespaceSvgElement(svgEl, 'it_' + id);
-      if(a.colorMode==='editable') sanitizeEditableSvg(svgEl);
-
       const vb = getViewBoxSize(svgEl);
-      if(!vb.w || !vb.h){
-        console.warn('SVG ohne brauchbaren viewBox/Size:', a.file, vb);
-      }
-
       const item = {
-        id: id,
+        id: uid(),
         assetId: a.id,
         name: a.name,
         colorMode: a.colorMode,
@@ -828,7 +692,6 @@ async function loadAssets(){
       renderAll();
     }
 
-    // ===== Render =====
     function renderAll(){
       els.canvasSvg.innerHTML = '';
       const items = state.items.slice().sort((a,b)=>(a.z||0)-(b.z||0));
@@ -895,7 +758,6 @@ async function loadAssets(){
       }
     }
 
-    // ===== Selection UI =====
     function updateSelectionUI(){
       const selItems = state.items.filter(it=>state.selection.has(it.id));
       if(selItems.length===0){
@@ -952,7 +814,6 @@ async function loadAssets(){
       els.warnBadge.style.color = outside ? 'rgba(255,92,92,.95)' : 'rgba(52,211,153,.95)';
     }
 
-    // ===== Hit testing =====
     function hitTest(clientX, clientY){
       const p = svgPointFromClient(clientX, clientY);
       const items = state.items.slice().sort((a,b)=>(b.z||0)-(a.z||0));
@@ -963,7 +824,6 @@ async function loadAssets(){
       return null;
     }
 
-    // ===== Interactions (move/resize/rotate) =====
     let drag = null;
 
     els.stageArea.addEventListener('pointerdown', (e)=>{
@@ -1059,7 +919,6 @@ async function loadAssets(){
     window.addEventListener('pointermove', onPointerMove);
     window.addEventListener('pointerup', ()=>{ drag=null; });
 
-    // Resize handles
     els.selBox.querySelectorAll('.handle').forEach(h=>{
       h.addEventListener('pointerdown', (e)=>{
         e.stopPropagation();
@@ -1074,9 +933,9 @@ async function loadAssets(){
         let anchorX = bb.x, anchorY = bb.y;
         let anchorCorner = 'left', anchorCornerY = 'top';
 
-        if(corner==='br'){ anchorX = bb.x;      anchorY = bb.y;      anchorCorner='left';  anchorCornerY='top'; }
-        if(corner==='bl'){ anchorX = bb.x+bb.w; anchorY = bb.y;      anchorCorner='right'; anchorCornerY='top'; }
-        if(corner==='tr'){ anchorX = bb.x;      anchorY = bb.y+bb.h; anchorCorner='left';  anchorCornerY='bottom'; }
+        if(corner==='br'){ anchorX = bb.x; anchorY = bb.y; anchorCorner='left'; anchorCornerY='top'; }
+        if(corner==='bl'){ anchorX = bb.x+bb.w; anchorY = bb.y; anchorCorner='right'; anchorCornerY='top'; }
+        if(corner==='tr'){ anchorX = bb.x; anchorY = bb.y+bb.h; anchorCorner='left'; anchorCornerY='bottom'; }
         if(corner==='tl'){ anchorX = bb.x+bb.w; anchorY = bb.y+bb.h; anchorCorner='right'; anchorCornerY='bottom'; }
 
         drag = {
@@ -1087,7 +946,6 @@ async function loadAssets(){
       });
     });
 
-    // Rotation handle
     els.rotHandle.addEventListener('pointerdown', (e)=>{
       e.stopPropagation();
       const sel = state.items.filter(it=>state.selection.has(it.id));
@@ -1096,7 +954,7 @@ async function loadAssets(){
       const it = sel[0];
       const bb = getItemBBox(it);
       drag = { type:'rotate', itemId: it.id, cx: bb.x + bb.w/2, cy: bb.y + bb.h/2 };
-      try{ els.rotHandle.setPointerCapture(e.pointerId); }catch(_){ }
+      try{ els.rotHandle.setPointerCapture(e.pointerId); }catch(_){}
     });
 
     function deleteSelection(){
@@ -1119,7 +977,6 @@ async function loadAssets(){
       renderAll();
     }
 
-    // ===== UI bindings =====
     els.copyGapMm.addEventListener('input', ()=>{ state.copyGap = Number(els.copyGapMm.value||0); });
 
     els.marginMm.addEventListener('input', ()=>{
@@ -1184,7 +1041,6 @@ async function loadAssets(){
       renderAll();
     });
 
-    // Drag & drop
     els.stageArea.addEventListener('dragover', (e)=>{ e.preventDefault(); });
     els.stageArea.addEventListener('drop', (e)=>{
       e.preventDefault();
@@ -1193,7 +1049,6 @@ async function loadAssets(){
       addAssetToCanvas(assetId, p.x, p.y);
     });
 
-    // ===== PDF export =====
     els.exportBtn.addEventListener('click', async ()=>{
       try{
         const svgClone = els.canvasSvg.cloneNode(true);
@@ -1243,7 +1098,6 @@ async function loadAssets(){
       applyZoom(state.zoom);
     }
 
-    // ===== Minimal tests =====
     function assert(cond, msg){ if(!cond) throw new Error(msg || 'Assertion failed'); }
     function runTests(){
       assert(snap(12, 5)===10, 'snap(12,5) should be 10');
@@ -1257,26 +1111,45 @@ async function loadAssets(){
       return true;
     }
 
-    // Init
-(async ()=>{
-  await loadAssets();   // ❗ war bei dir: loadAssetSvgs()
-  renderLibrary();
-  setCanvasSize(600,1000);
-  syncControls();
-  renderAll();
-})();
+    // Login
+    const loginOverlay = document.getElementById('loginOverlay');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginUser = document.getElementById('loginUser');
+    const loginPass = document.getElementById('loginPass');
+    const loginError = document.getElementById('loginError');
 
-    try{
-      const ok = runTests();
-      els.testBadge.textContent = ok ? 'Tests: OK' : 'Tests: ?';
-      els.testBadge.style.borderColor = 'rgba(52,211,153,.35)';
-      els.testBadge.style.color = 'rgba(52,211,153,.95)';
-    } catch(err){
-      console.error('Tests failed:', err);
-      els.testBadge.textContent = 'Tests: FAIL';
-      els.testBadge.style.borderColor = 'rgba(255,92,92,.6)';
-      els.testBadge.style.color = 'rgba(255,92,92,.95)';
-    }
+    loginBtn.addEventListener('click', ()=>{
+      if(loginUser.value === 'Tine' && loginPass.value === '#gehobenemittelschicht'){
+        loginOverlay.style.display = 'none';
+      } else {
+        loginError.style.display = 'block';
+      }
+    });
+
+    loginPass.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter') loginBtn.click();
+    });
+
+    // Init (async, damit /assets geladen werden)
+    (async ()=>{
+      await loadAssetSvgs();
+      renderLibrary();
+      setCanvasSize(600,1000);
+      syncControls();
+      renderAll();
+
+      try{
+        const ok = runTests();
+        els.testBadge.textContent = ok ? 'Tests: OK' : 'Tests: ?';
+        els.testBadge.style.borderColor = 'rgba(52,211,153,.35)';
+        els.testBadge.style.color = 'rgba(52,211,153,.95)';
+      } catch(err){
+        console.error('Tests failed:', err);
+        els.testBadge.textContent = 'Tests: FAIL';
+        els.testBadge.style.borderColor = 'rgba(255,92,92,.6)';
+        els.testBadge.style.color = 'rgba(255,92,92,.95)';
+      }
+    })();
   </script>
 </body>
 </html>
