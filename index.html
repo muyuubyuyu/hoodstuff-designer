@@ -24,7 +24,7 @@
     .topbar .group{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .chip{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);background:rgba(21,26,34,.9);border-radius:12px;color:var(--text)}
     .chip label{color:var(--muted);font-size:12px}
-    input[type="number"], input[type="text"], select{background:rgba(10,14,20,.8);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px 10px;outline:none;min-width:70px}
+    input[type="number"], input[type="text"], input[type="password"], select{background:rgba(10,14,20,.8);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px 10px;outline:none;min-width:70px}
     input[type="color"]{width:36px;height:30px;border-radius:10px;border:1px solid var(--line);background:transparent;padding:0;overflow:hidden}
     button{background:rgba(106,169,255,.15);border:1px solid rgba(106,169,255,.35);color:var(--text);border-radius:12px;padding:8px 10px;cursor:pointer;user-select:none}
     button:hover{background:rgba(106,169,255,.22)}
@@ -34,7 +34,6 @@
 
     .main{grid-row:2;display:flex;flex-direction:column;min-width:0}
 
-    /* Native scrolling */
     .stageWrap{position:relative;flex:1;overflow:auto;padding:18px;scrollbar-gutter:stable both-edges}
     .stageArea{position:relative;width:max-content;margin:0 auto;padding:22px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
 
@@ -68,7 +67,6 @@
     .badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:rgba(21,26,34,.75);color:var(--muted)}
     .badge b{color:var(--text)}
 
-    /* Selection */
     .selBox{position:absolute;border:2px solid rgba(106,169,255,.75);border-radius:10px;pointer-events:auto;display:none}
     .selBox.multi{border-style:dashed}
     .handle{position:absolute;width:10px;height:10px;border-radius:999px;background:rgba(106,169,255,1);border:2px solid rgba(16,19,26,1);pointer-events:auto;cursor:nwse-resize}
@@ -92,7 +90,6 @@
     .selBtn:hover{border-color:rgba(106,169,255,.55)}
     .selBtn.danger{border-color:rgba(255,92,92,.5)}
 
-    /* Pan cursor */
     .stageWrap.panning{cursor:grabbing}
 
     @media (max-width:980px){
@@ -102,6 +99,20 @@
   </style>
 </head>
 <body>
+
+  <!-- Login Overlay -->
+  <div id="loginOverlay" style="position:fixed;inset:0;background:#0f1115;display:flex;align-items:center;justify-content:center;z-index:9999;">
+    <div style="background:#151a22;border:1px solid #2a3242;border-radius:16px;padding:28px;width:320px;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 60px rgba(0,0,0,.6)">
+      <div style="font-size:18px;font-weight:600;text-align:center">Drucklayout Tool Login</div>
+      <input id="loginUser" type="text" placeholder="Nutzername" autocomplete="username" style="padding:10px;border-radius:10px;border:1px solid #2a3242;background:#0b0e13;color:#e7eaf0">
+      <input id="loginPass" type="password" placeholder="Passwort" autocomplete="current-password" style="padding:10px;border-radius:10px;border:1px solid #2a3242;background:#0b0e13;color:#e7eaf0">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#a5adbd;user-select:none">
+        <input id="loginRemember" type="checkbox" style="width:14px;height:14px;accent-color:#6aa9ff"> Merken
+      </label>
+      <button id="loginBtn" style="padding:10px;border-radius:12px;border:1px solid rgba(106,169,255,.4);background:rgba(106,169,255,.15);color:#e7eaf0;cursor:pointer">Login</button>
+      <div id="loginError" style="font-size:12px;color:#ff5c5c;text-align:center;display:none">Falsche Zugangsdaten</div>
+    </div>
+  </div>
 
   <div class="app">
     <div class="topbar">
@@ -157,7 +168,7 @@
 
       <div class="group chip">
         <label for="objColor">Objektfarbe</label>
-        <input id="objColor" type="color" value="#000000" title="Farbe für änderbare SVGs" />
+        <input id="objColor" type="color" value="#000000" title="Farbe für SVGs" />
       </div>
 
       <button id="undoBtn" class="ghost">Undo</button>
@@ -197,7 +208,7 @@
 
     <aside class="side">
       <div class="section">
-        <p class="h">Bibliothek (Platzhalter)</p>
+        <p class="h">Bibliothek</p>
         <div class="lib" id="library"></div>
       </div>
 
@@ -229,7 +240,14 @@
   <script src="https://cdn.jsdelivr.net/npm/svg2pdf.js@2.2.3/dist/svg2pdf.umd.min.js"></script>
 
   <script>
-    // Feste Assets (immer drin)  ✅ (ÄNDERUNG #1: file statt url / korrektes Array)
+    // ===== Assets (fix) =====
+    // Repo-Struktur:
+    //  index.html
+    //  assets/
+    //    all-colognians-are-beautiful.svg
+    //    hoodstufff-logo.svg
+    //    plz-rauten.svg
+    //    qr-code.svg
     const ASSETS = [
       { id:'col',  name:'All Colognians Are Beautiful', file:'assets/all-colognians-are-beautiful.svg', colorMode:'editable' },
       { id:'hood', name:'Hoodstuff Logo',              file:'assets/hoodstufff-logo.svg',             colorMode:'editable' },
@@ -237,8 +255,87 @@
       { id:'qr',   name:'QR Code',                     file:'assets/qr-code.svg',                    colorMode:'editable' }
     ];
 
+    // ===== Helpers =====
     const PX_PER_MM = 3.7795275591;
+    const uid = () => 'i' + Math.random().toString(16).slice(2);
+    const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+    const snap = (v, step) => Math.round(v/step)*step;
 
+    function parseSvg(svgString){
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(svgString, 'image/svg+xml');
+      return doc.documentElement;
+    }
+
+    function getViewBoxSize(svgEl){
+      const vbRaw = (svgEl.getAttribute('viewBox') || '0 0 0 0').replaceAll(',', ' ');
+      const parts = vbRaw.split(' ').filter(Boolean).map(Number);
+      return { w: parts[2] || 0, h: parts[3] || 0 };
+    }
+
+    // Macht SVG "einfarbig" indem fill/stroke auf currentColor gesetzt wird (außer "none").
+    // So können wir später per inner.style.color = "#000" alles einfärben.
+    function normalizeSvgToSingleColor(svgText){
+      const svgEl = parseSvg(svgText);
+
+      // width/height raus, viewBox bleibt
+      svgEl.removeAttribute('width');
+      svgEl.removeAttribute('height');
+
+      const TAGS_DEFAULT_FILL = new Set(['path','rect','circle','ellipse','polygon','polyline','text','line']);
+      const walker = document.createTreeWalker(svgEl, NodeFilter.SHOW_ELEMENT, null);
+
+      while(walker.nextNode()){
+        const el = walker.currentNode;
+
+        // style attr: fill/stroke killen (damit currentColor gewinnt)
+        if(el.hasAttribute('style')){
+          const s = el.getAttribute('style') || '';
+          const cleaned = s
+            .replace(/fill\s*:\s*[^;]+;?/gi, '')
+            .replace(/stroke\s*:\s*[^;]+;?/gi, '')
+            .trim();
+          if(cleaned) el.setAttribute('style', cleaned);
+          else el.removeAttribute('style');
+        }
+
+        // fill
+        const tag = (el.tagName || '').toLowerCase();
+        if(el.hasAttribute('fill')){
+          const v = (el.getAttribute('fill') || '').trim().toLowerCase();
+          if(v !== 'none') el.setAttribute('fill', 'currentColor');
+        } else if(TAGS_DEFAULT_FILL.has(tag)){
+          // wenn kein fill gesetzt: default auf currentColor
+          el.setAttribute('fill', 'currentColor');
+        }
+
+        // stroke
+        if(el.hasAttribute('stroke')){
+          const v = (el.getAttribute('stroke') || '').trim().toLowerCase();
+          if(v !== 'none') el.setAttribute('stroke', 'currentColor');
+        }
+      }
+
+      return svgEl.outerHTML;
+    }
+
+    async function loadAssetSvgs(){
+      for(const a of ASSETS){
+        try{
+          const res = await fetch(a.file, { cache:'no-store' });
+          if(!res.ok) throw new Error('HTTP ' + res.status);
+          const raw = await res.text();
+          a.svg = normalizeSvgToSingleColor(raw);
+        }catch(err){
+          console.warn('Asset konnte nicht geladen werden:', a.file, err);
+          a.svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60"><rect x="6" y="6" width="108" height="48" rx="10" ry="10" fill="none" stroke="currentColor" stroke-width="4"/><path d="M18 42 L48 18 L68 38 L102 14" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+          a.colorMode = 'editable';
+          a.name = a.name + ' (fehlt)';
+        }
+      }
+    }
+
+    // ===== State =====
     const state = {
       zoom: 1,
       canvas: { w: 600, h: 1000, basePxW: 600*PX_PER_MM, basePxH: 1000*PX_PER_MM },
@@ -293,10 +390,7 @@
       objColor: document.getElementById('objColor')
     };
 
-    const uid = () => 'i' + Math.random().toString(16).slice(2);
-    const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
-    const snap = (v, step) => Math.round(v/step)*step;
-
+    // ===== History =====
     function pushHistory(){
       const snapshot = JSON.parse(JSON.stringify({
         zoom: state.zoom,
@@ -363,6 +457,7 @@
       els.canvasSvg.style.width = wPx + 'px';
       els.canvasSvg.style.height = hPx + 'px';
 
+      // wichtig: stageBg NICHT auf wPx/hPx festnageln, sonst dunkle Streifen rechts/unten
       els.stageBg.style.width = '';
       els.stageBg.style.height = '';
 
@@ -395,7 +490,7 @@
       applyZoom(state.zoom * factor);
     }, { passive:false });
 
-    // ===== PAN (reliable): SHIFT + Linksklick halten & ziehen =====
+    // ===== PAN (SHIFT + Drag) =====
     let pan = null;
 
     function isOverCanvas(clientX, clientY){
@@ -423,7 +518,7 @@
 
       e.preventDefault();
       e.stopPropagation();
-      try{ els.stageWrap.setPointerCapture(e.pointerId); }catch(_){ }
+      try{ els.stageWrap.setPointerCapture(e.pointerId); }catch(_){}
     }, true);
 
     els.stageWrap.addEventListener('pointermove', (e)=>{
@@ -443,7 +538,6 @@
       els.stageWrap.classList.remove('panning');
       document.body.style.userSelect = '';
     }
-
     els.stageWrap.addEventListener('pointerup', (e)=>{ if(pan && e.pointerId===pan.pid) endPan(); });
     els.stageWrap.addEventListener('pointercancel', endPan);
     els.stageWrap.addEventListener('lostpointercapture', endPan);
@@ -488,171 +582,28 @@
       ctx.setLineDash([]);
     }
 
-    // ===== SVG utils =====
-    function parseSvg(svgString){
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(svgString, 'image/svg+xml');
-      return doc.documentElement;
-    }
-
-    function namespaceSvgElement(svgEl, prefix){
-      if(!svgEl || svgEl.nodeName.toLowerCase() !== 'svg') return;
-
-      const map = new Map();
-      const all = svgEl.querySelectorAll('[id]');
-      for(const el of all){
-        const id = el.getAttribute('id');
-        if(!id) continue;
-        if(id.startsWith(prefix + '_')) continue;
-        const nid = prefix + '_' + id;
-        map.set(id, nid);
-        el.setAttribute('id', nid);
-      }
-      if(map.size === 0) return;
-
-      const rewriteVal = (val)=>{
-        if(!val) return val;
-        let out = val;
-        for(const [oldId, newId] of map){
-          out = out.split('url(#' + oldId + ')').join('url(#' + newId + ')');
-          out = out.split('#' + oldId).join('#' + newId);
-        }
-        return out;
-      };
-
-      const elems = svgEl.querySelectorAll('*');
-      for(const el of elems){
-        for(const attr of Array.from(el.attributes || [])){
-          const v = attr.value;
-          if(!v) continue;
-          if(v.includes('url(#') || v.includes('#')){
-            const nv = rewriteVal(v);
-            if(nv !== v) el.setAttribute(attr.name, nv);
-          }
-        }
-        if(el.hasAttribute('style')){
-          const sv = el.getAttribute('style');
-          const nv = rewriteVal(sv);
-          if(nv !== sv) el.setAttribute('style', nv);
-        }
-      }
-
-      const styleTags = svgEl.querySelectorAll('style');
-      for(const st of styleTags){
-        const txt = st.textContent || '';
-        const ntxt = rewriteVal(txt);
-        if(ntxt !== txt) st.textContent = ntxt;
-      }
-    }
-
-    function numAttr(el, name){
-      const v = (el.getAttribute(name) || '').toString().trim();
-      if(!v) return NaN;
-      const n = parseFloat(v);
-      return Number.isFinite(n) ? n : NaN;
-    }
-
-    function ensureViewBox(svgEl){
-      const vb = (svgEl.getAttribute('viewBox') || '').trim();
-      if(vb) return;
-      const w = numAttr(svgEl,'width');
-      const h = numAttr(svgEl,'height');
-      if(Number.isFinite(w) && Number.isFinite(h) && w>0 && h>0){
-        svgEl.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
-      }
-    }
-
-    function sanitizeEditableSvg(svgEl){
-      const walk = (node)=>{
-        if(node.nodeType!==1) return;
-        const el = node;
-
-        if(el.hasAttribute('fill')){
-          const fv = (el.getAttribute('fill') || '').trim().toLowerCase();
-          if(fv && fv !== 'none') el.removeAttribute('fill');
-        }
-        if(el.hasAttribute('stroke')){
-          const sv = (el.getAttribute('stroke') || '').trim().toLowerCase();
-          if(sv && sv !== 'none') el.removeAttribute('stroke');
-        }
-        if(el.hasAttribute('stroke-width')) el.removeAttribute('stroke-width');
-
-        if(el.hasAttribute('style')){
-          const s = (el.getAttribute('style') || '').split(';').map(x=>x.trim()).filter(Boolean);
-          const keep = [];
-          for(const rule of s){
-            const low = rule.toLowerCase();
-            if(low.startsWith('fill:') && !low.startsWith('fill:none')) continue;
-            if(low.startsWith('stroke:') && !low.startsWith('stroke:none')) continue;
-            if(low.startsWith('stroke-width:')) continue;
-            keep.push(rule);
-          }
-          if(keep.length) el.setAttribute('style', keep.join('; '));
-          else el.removeAttribute('style');
-        }
-
-        for(const ch of Array.from(el.children)) walk(ch);
-      };
-      walk(svgEl);
-      return svgEl;
-    }
-
-    // Assets laden (svg in ASSETS[*].svg schreiben)  ✅ (nutzt "file")
-    async function loadAssetSvgs(){
-      await Promise.all(ASSETS.map(async (a)=>{
-        try{
-          const res = await fetch(a.file, { cache: 'no-cache' });
-          if(!res.ok) throw new Error('HTTP ' + res.status);
-          a.svg = await res.text();
-        }catch(err){
-          console.error('Asset load error', a.file, err);
-          a.svg = null;
-        }
-      }));
-    }
-
-    function getViewBoxSize(svgEl){
-      const vbRaw = (svgEl.getAttribute('viewBox') || '0 0 0 0').replaceAll(',', ' ');
-      const parts = vbRaw.split(' ').filter(Boolean).map(Number);
-      return { w: parts[2] || 0, h: parts[3] || 0 };
-    }
-
     // ===== Library =====
     function renderLibrary(){
       els.library.innerHTML = '';
       for(const a of ASSETS){
         const tile = document.createElement('div');
         tile.className = 'tile';
-        tile.draggable = Boolean(a.svg);
-        tile.title = a.name;
+        tile.draggable = true;
 
         const thumb = document.createElement('div');
         thumb.className = 'thumb';
 
-        if(a.svg){
-          const svgEl = parseSvg(a.svg);
-          ensureViewBox(svgEl);
-          namespaceSvgElement(svgEl, 'lib_' + a.id);
-          if(a.colorMode==='editable') sanitizeEditableSvg(svgEl);
+        const svgEl = parseSvg(a.svg || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60"><rect x="8" y="8" width="104" height="44"/></svg>');
+        svgEl.removeAttribute('width');
+        svgEl.removeAttribute('height');
+        svgEl.setAttribute('width','100%');
+        svgEl.setAttribute('height','100%');
+        svgEl.style.color = state.editableFill;
 
-          svgEl.removeAttribute('width');
-          svgEl.removeAttribute('height');
-          svgEl.setAttribute('width','100%');
-          svgEl.setAttribute('height','100%');
-          if(a.colorMode==='editable') svgEl.setAttribute('fill', state.editableFill);
-          thumb.appendChild(svgEl);
-        } else {
-          const ph = document.createElement('div');
-          ph.style.fontSize = '12px';
-          ph.style.color = 'var(--muted)';
-          ph.textContent = 'SVG nicht geladen';
-          thumb.appendChild(ph);
-        }
-
+        thumb.appendChild(svgEl);
         tile.appendChild(thumb);
 
         tile.addEventListener('dragstart', (e)=>{
-          if(!a.svg) return;
           e.dataTransfer.setData('text/plain', a.id);
         });
 
@@ -721,19 +672,16 @@
     // ===== Canvas items =====
     function addAssetToCanvas(assetId, x, y){
       const a = ASSETS.find(v=>v.id===assetId);
-      if(!a || !a.svg) return;
+      if(!a) return;
+      if(!a.svg){ console.warn('Asset svg fehlt:', a); return; }
+
       pushHistory();
 
-      const id = uid();
       const svgEl = parseSvg(a.svg);
-      ensureViewBox(svgEl);
-      namespaceSvgElement(svgEl, 'it_' + id);
-      if(a.colorMode==='editable') sanitizeEditableSvg(svgEl);
-
       const vb = getViewBoxSize(svgEl);
 
       const item = {
-        id: id,
+        id: uid(),
         assetId: a.id,
         name: a.name,
         colorMode: a.colorMode,
@@ -744,11 +692,13 @@
         w0: vb.w,
         h0: vb.h,
         svgInner: svgEl.innerHTML,
-        z: nextZ()
+        z: nextZ(),
+        fill: state.editableFill
       };
 
       const targetW = 120;
       if(item.w0>0) item.scale = targetW / item.w0;
+
       const wNow = item.w0 * item.scale;
       const hNow = item.h0 * item.scale;
       item.x = x - wNow/2;
@@ -784,7 +734,8 @@
         w0: it.w0,
         h0: it.h0,
         svgInner: it.svgInner,
-        z: nextZ()
+        z: nextZ(),
+        fill: it.fill || state.editableFill
       }));
 
       let dx = 0, dy = 0;
@@ -812,6 +763,7 @@
     function renderAll(){
       els.canvasSvg.innerHTML = '';
       const items = state.items.slice().sort((a,b)=>(a.z||0)-(b.z||0));
+
       for(const it of items){
         const g = document.createElementNS('http://www.w3.org/2000/svg','g');
         g.setAttribute('data-item-id', it.id);
@@ -819,6 +771,7 @@
         const cx = it.w0/2;
         const cy = it.h0/2;
         const rot = it.rot || 0;
+
         g.setAttribute(
           'transform',
           'translate(' + it.x + ' ' + it.y + ') ' +
@@ -830,10 +783,14 @@
 
         const inner = document.createElementNS('http://www.w3.org/2000/svg','g');
         inner.innerHTML = it.svgInner;
-        if(it.colorMode==='editable') inner.setAttribute('fill', it.fill || state.editableFill);
+
+        // Einfarbig via currentColor
+        inner.style.color = it.fill || state.editableFill;
+
         g.appendChild(inner);
         els.canvasSvg.appendChild(g);
       }
+
       renderLayerList();
       updateSelectionUI();
       updateWarnings();
@@ -851,9 +808,11 @@
         const nm = document.createElement('div');
         nm.className = 'name';
         nm.textContent = it.name;
+
         const meta = document.createElement('div');
         meta.className = 'meta';
-        meta.textContent = it.colorMode==='fixed' ? 'Farbe fix' : 'Farbe änderbar';
+        meta.textContent = 'Einfarbig (änderbar)';
+
         left.appendChild(nm);
         left.appendChild(meta);
 
@@ -867,10 +826,16 @@
         kill.addEventListener('click', (e)=>{ e.stopPropagation(); state.selection = new Set([it.id]); deleteSelection(); });
 
         btns.appendChild(kill);
-
         row.appendChild(left);
         row.appendChild(btns);
-        row.addEventListener('click', ()=>{ state.selection = new Set([it.id]); renderLayerList(); updateSelectionUI(); updateWarnings(); });
+
+        row.addEventListener('click', ()=>{
+          state.selection = new Set([it.id]);
+          renderLayerList();
+          updateSelectionUI();
+          updateWarnings();
+        });
+
         els.layerList.appendChild(row);
       }
     }
@@ -981,6 +946,7 @@
     function onPointerMove(e){
       if(pan) return;
       if(!drag) return;
+
       const cur = svgPointFromClient(e.clientX, e.clientY);
 
       if(drag.type==='move'){
@@ -1005,6 +971,7 @@
       if(drag.type==='scale'){
         const it = state.items.find(x=>x.id===drag.itemId);
         if(!it) return;
+
         const base = drag.base;
         const newW = Math.max(1, Math.abs(cur.x - base.anchorX));
         const scale = newW / base.w0;
@@ -1054,9 +1021,9 @@
         let anchorX = bb.x, anchorY = bb.y;
         let anchorCorner = 'left', anchorCornerY = 'top';
 
-        if(corner==='br'){ anchorX = bb.x; anchorY = bb.y; anchorCorner='left'; anchorCornerY='top'; }
-        if(corner==='bl'){ anchorX = bb.x+bb.w; anchorY = bb.y; anchorCorner='right'; anchorCornerY='top'; }
-        if(corner==='tr'){ anchorX = bb.x; anchorY = bb.y+bb.h; anchorCorner='left'; anchorCornerY='bottom'; }
+        if(corner==='br'){ anchorX = bb.x;      anchorY = bb.y;      anchorCorner='left';  anchorCornerY='top'; }
+        if(corner==='bl'){ anchorX = bb.x+bb.w; anchorY = bb.y;      anchorCorner='right'; anchorCornerY='top'; }
+        if(corner==='tr'){ anchorX = bb.x;      anchorY = bb.y+bb.h; anchorCorner='left';  anchorCornerY='bottom'; }
         if(corner==='tl'){ anchorX = bb.x+bb.w; anchorY = bb.y+bb.h; anchorCorner='right'; anchorCornerY='bottom'; }
 
         drag = {
@@ -1076,7 +1043,7 @@
       const it = sel[0];
       const bb = getItemBBox(it);
       drag = { type:'rotate', itemId: it.id, cx: bb.x + bb.w/2, cy: bb.y + bb.h/2 };
-      try{ els.rotHandle.setPointerCapture(e.pointerId); }catch(_){ }
+      try{ els.rotHandle.setPointerCapture(e.pointerId); }catch(_){}
     });
 
     function deleteSelection(){
@@ -1130,8 +1097,9 @@
 
     els.objColor.addEventListener('input', ()=>{
       state.editableFill = els.objColor.value;
+
       const sel = state.items.filter(it=>state.selection.has(it.id));
-      if(sel.length===1 && sel[0].colorMode==='editable'){
+      if(sel.length===1){
         pushHistory();
         sel[0].fill = state.editableFill;
       }
@@ -1237,28 +1205,78 @@
       return true;
     }
 
-  
+    // ===== LOGIN (Pseudo Protection) =====
+    const loginOverlay = document.getElementById('loginOverlay');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginUser = document.getElementById('loginUser');
+    const loginPass = document.getElementById('loginPass');
+    const loginError = document.getElementById('loginError');
+    const loginRemember = document.getElementById('loginRemember');
 
-    // Init  ✅ (ÄNDERUNG #2: await loadAssetSvgs() statt loadAssetSvgs falsch / anderer Name)
+    const LOGIN_REMEMBER_KEY = 'hoodstuffDesignerRemember';
+
+    function hideLogin(){
+      loginOverlay.style.display = 'none';
+      loginError.style.display = 'none';
+    }
+
+    function showLogin(){
+      loginOverlay.style.display = 'flex';
+      loginError.style.display = 'none';
+      setTimeout(()=>{ try{ loginUser.focus(); }catch(_){} }, 50);
+    }
+
+    // Auto-Login
+    try{
+      const remembered = localStorage.getItem(LOGIN_REMEMBER_KEY)==='1';
+      if(remembered){
+        hideLogin();
+      }else{
+        showLogin();
+      }
+      if(loginRemember) loginRemember.checked = remembered;
+    }catch(_){
+      showLogin();
+    }
+
+    function doLogin(){
+      const u = (loginUser.value || '').trim();
+      const p = (loginPass.value || '');
+      if(u === 'Tine' && p === '#gehobenemittelschicht'){
+        try{
+          if(loginRemember && loginRemember.checked) localStorage.setItem(LOGIN_REMEMBER_KEY,'1');
+          else localStorage.removeItem(LOGIN_REMEMBER_KEY);
+        }catch(_){}
+        hideLogin();
+      }else{
+        loginError.style.display = 'block';
+      }
+    }
+
+    loginBtn.addEventListener('click', doLogin);
+    loginUser.addEventListener('keydown', (e)=>{ if(e.key==='Enter') doLogin(); });
+    loginPass.addEventListener('keydown', (e)=>{ if(e.key==='Enter') doLogin(); });
+
+    // ===== Init (async) =====
     (async ()=>{
       await loadAssetSvgs();
       renderLibrary();
       setCanvasSize(600,1000);
       syncControls();
       renderAll();
-    })();
 
-    try{
-      const ok = runTests();
-      els.testBadge.textContent = ok ? 'Tests: OK' : 'Tests: ?';
-      els.testBadge.style.borderColor = 'rgba(52,211,153,.35)';
-      els.testBadge.style.color = 'rgba(52,211,153,.95)';
-    } catch(err){
-      console.error('Tests failed:', err);
-      els.testBadge.textContent = 'Tests: FAIL';
-      els.testBadge.style.borderColor = 'rgba(255,92,92,.6)';
-      els.testBadge.style.color = 'rgba(255,92,92,.95)';
-    }
+      try{
+        const ok = runTests();
+        els.testBadge.textContent = ok ? 'Tests: OK' : 'Tests: ?';
+        els.testBadge.style.borderColor = 'rgba(52,211,153,.35)';
+        els.testBadge.style.color = 'rgba(52,211,153,.95)';
+      } catch(err){
+        console.error('Tests failed:', err);
+        els.testBadge.textContent = 'Tests: FAIL';
+        els.testBadge.style.borderColor = 'rgba(255,92,92,.6)';
+        els.testBadge.style.color = 'rgba(255,92,92,.95)';
+      }
+    })();
   </script>
 </body>
 </html>
