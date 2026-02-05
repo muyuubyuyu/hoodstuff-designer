@@ -116,6 +116,7 @@
       <div id="loginError" style="font-size:12px;color:#ff5c5c;text-align:center;display:none">Falsche Zugangsdaten</div>
     </div>
   </div>
+
   <div class="app">
     <div class="topbar">
       <div class="group chip">
@@ -242,13 +243,13 @@
   <script src="https://cdn.jsdelivr.net/npm/svg2pdf.js@2.2.3/dist/svg2pdf.umd.min.js"></script>
 
   <script>
-    // Feste Assets (immer drin)
-const ASSETS = [
-  { id:'col',  name:'All Colognians Are Beautiful', file:'assets/all-colognians-are-beautiful.svg', colorMode:'editable' },
-  { id:'hood', name:'Hoodstuff Logo',              file:'assets/hoodstufff-logo.svg',             colorMode:'editable' },
-  { id:'plz',  name:'PLZ Rauten',                  file:'assets/plz-rauten.svg',                 colorMode:'editable' },
-  { id:'qr',   name:'QR Code',                     file:'assets/qr-code.svg',                    colorMode:'editable' }
-];
+    // Feste Assets (immer drin)  ✅ (ÄNDERUNG #1: file statt url / korrektes Array)
+    const ASSETS = [
+      { id:'col',  name:'All Colognians Are Beautiful', file:'assets/all-colognians-are-beautiful.svg', colorMode:'editable' },
+      { id:'hood', name:'Hoodstuff Logo',              file:'assets/hoodstufff-logo.svg',             colorMode:'editable' },
+      { id:'plz',  name:'PLZ Rauten',                  file:'assets/plz-rauten.svg',                 colorMode:'editable' },
+      { id:'qr',   name:'QR Code',                     file:'assets/qr-code.svg',                    colorMode:'editable' }
+    ];
 
     const PX_PER_MM = 3.7795275591;
 
@@ -375,8 +376,7 @@ const ASSETS = [
 
       els.canvasSvg.style.width = wPx + 'px';
       els.canvasSvg.style.height = hPx + 'px';
-      // stageBg bleibt per CSS (inset:0) immer vollflächig – keine festen px-Werte,
-      // sonst entstehen dunkle Streifen, wenn StageArea breiter als das Canvas wird.
+
       els.stageBg.style.width = '';
       els.stageBg.style.height = '';
 
@@ -410,7 +410,6 @@ const ASSETS = [
     }, { passive:false });
 
     // ===== PAN (reliable): SHIFT + Linksklick halten & ziehen =====
-    // Wichtig: Wir nutzen Pointer Events + PointerCapture, damit X/Y immer stabil ankommt.
     let pan = null;
 
     function isOverCanvas(clientX, clientY){
@@ -418,12 +417,10 @@ const ASSETS = [
       return clientX>=r.left && clientX<=r.right && clientY>=r.top && clientY<=r.bottom;
     }
 
-    // SHIFT + Linksklick: Pan starten (capture=true, damit es auch ueber Overlay/Handles funktioniert)
-els.stageWrap.addEventListener('pointerdown', (e)=>{
-      if(e.button !== 0) return;      // nur Linksklick
-      if(!e.shiftKey) return;         // nur mit SHIFT
+    els.stageWrap.addEventListener('pointerdown', (e)=>{
+      if(e.button !== 0) return;
+      if(!e.shiftKey) return;
 
-      // Start erlauben, wenn ueber Canvas ODER ueber Selection-Overlay innerhalb der Stage
       const over = isOverCanvas(e.clientX, e.clientY) || els.stageArea.contains(e.target);
       if(!over) return;
 
@@ -449,7 +446,6 @@ els.stageWrap.addEventListener('pointerdown', (e)=>{
 
       const dx = e.clientX - pan.x;
       const dy = e.clientY - pan.y;
-      // Drag-Feeling: Mausbewegung = Viewport bewegen (runterziehen => nach unten scrollen)
       els.stageWrap.scrollLeft = pan.sl + dx;
       els.stageWrap.scrollTop  = pan.st + dy;
 
@@ -514,7 +510,6 @@ els.stageWrap.addEventListener('pointerdown', (e)=>{
     }
 
     function namespaceSvgElement(svgEl, prefix){
-      // IDs in SVGs sind dokumentweit eindeutig. Ohne Namespacing kollidieren clipPath/mask/gradient.
       if(!svgEl || svgEl.nodeName.toLowerCase() !== 'svg') return;
 
       const map = new Map();
@@ -582,8 +577,6 @@ els.stageWrap.addEventListener('pointerdown', (e)=>{
     }
 
     function sanitizeEditableSvg(svgEl){
-      // Entfernt feste Fill/Stroke Farben, damit "Objektfarbe" sauber greift.
-      // Wichtig: fill="none" / stroke="none" behalten, sonst werden einige SVGs unsichtbar.
       const walk = (node)=>{
         if(node.nodeType!==1) return;
         const el = node;
@@ -617,16 +610,16 @@ els.stageWrap.addEventListener('pointerdown', (e)=>{
       walk(svgEl);
       return svgEl;
     }
-    }
 
-    async function loadAssets(){
+    // Assets laden (svg in ASSETS[*].svg schreiben)  ✅ (nutzt "file")
+    async function loadAssetSvgs(){
       await Promise.all(ASSETS.map(async (a)=>{
         try{
-          const res = await fetch(a.url, { cache: 'no-cache' });
+          const res = await fetch(a.file, { cache: 'no-cache' });
           if(!res.ok) throw new Error('HTTP ' + res.status);
           a.svg = await res.text();
         }catch(err){
-          console.error('Asset load error', a.url, err);
+          console.error('Asset load error', a.file, err);
           a.svg = null;
         }
       }));
@@ -663,7 +656,6 @@ els.stageWrap.addEventListener('pointerdown', (e)=>{
           if(a.colorMode==='editable') svgEl.setAttribute('fill', state.editableFill);
           thumb.appendChild(svgEl);
         } else {
-
           const ph = document.createElement('div');
           ph.style.fontSize = '12px';
           ph.style.color = 'var(--muted)';
@@ -753,9 +745,6 @@ els.stageWrap.addEventListener('pointerdown', (e)=>{
       if(a.colorMode==='editable') sanitizeEditableSvg(svgEl);
 
       const vb = getViewBoxSize(svgEl);
-      if(!vb.w || !vb.h){
-        console.warn('SVG ohne brauchbaren viewBox/Size:', a.url, vb);
-      }
 
       const item = {
         id: id,
@@ -913,7 +902,6 @@ els.stageWrap.addEventListener('pointerdown', (e)=>{
       const bb = getGroupBBox(selItems);
       const pxPerMm = els.gridOverlay.width / state.canvas.w;
 
-      // Canvas kann innerhalb der StageArea durch Padding/Flow verschoben sein -> Offset immer live messen
       const cr = els.canvasSvg.getBoundingClientRect();
       const sr = els.stageArea.getBoundingClientRect();
       const offX = cr.left - sr.left;
@@ -973,7 +961,6 @@ els.stageWrap.addEventListener('pointerdown', (e)=>{
     let drag = null;
 
     els.stageArea.addEventListener('pointerdown', (e)=>{
-      // Wenn wir panen oder SHIFT gedrueckt ist: keine Objekt-Interaktion
       if(pan) return;
       if(e.shiftKey && e.button===0) return;
 
@@ -1078,7 +1065,6 @@ els.stageWrap.addEventListener('pointerdown', (e)=>{
         const bb = getItemBBox(it);
         const corner = h.getAttribute('data-h');
 
-        // Anchor opposite corner
         let anchorX = bb.x, anchorY = bb.y;
         let anchorCorner = 'left', anchorCornerY = 'top';
 
@@ -1266,49 +1252,46 @@ els.stageWrap.addEventListener('pointerdown', (e)=>{
     }
 
     // ===== LOGIN LOGIC (Pseudo Protection) =====
-const loginOverlay = document.getElementById('loginOverlay');
-const loginBtn = document.getElementById('loginBtn');
-const loginUser = document.getElementById('loginUser');
-const loginPass = document.getElementById('loginPass');
-const loginError = document.getElementById('loginError');
-const loginRemember = document.getElementById('loginRemember');
+    const loginOverlay = document.getElementById('loginOverlay');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginUser = document.getElementById('loginUser');
+    const loginPass = document.getElementById('loginPass');
+    const loginError = document.getElementById('loginError');
+    const loginRemember = document.getElementById('loginRemember');
 
-const LOGIN_REMEMBER_KEY = 'hoodstuffDesignerRemember';
-// Auto-Login (Pseudo): wenn gemerkt, Overlay direkt ausblenden
-try{
-  if(localStorage.getItem(LOGIN_REMEMBER_KEY)==='1'){
-    loginOverlay.style.display = 'none';
-  }
-}catch(_){ }
-
-loginBtn.addEventListener('click', ()=>{
-  if(loginUser.value === 'Tine' && loginPass.value === '#gehobenemittelschicht'){
-    // merken
+    const LOGIN_REMEMBER_KEY = 'hoodstuffDesignerRemember';
     try{
-      if(loginRemember && loginRemember.checked) localStorage.setItem(LOGIN_REMEMBER_KEY,'1');
-      else localStorage.removeItem(LOGIN_REMEMBER_KEY);
+      if(localStorage.getItem(LOGIN_REMEMBER_KEY)==='1'){
+        loginOverlay.style.display = 'none';
+      }
     }catch(_){ }
 
-    loginError.style.display = 'none';
-    loginOverlay.style.display = 'none';
-  } else {
-    loginError.style.display = 'block';
-  }
-});
+    loginBtn.addEventListener('click', ()=>{
+      if(loginUser.value === 'Tine' && loginPass.value === '#gehobenemittelschicht'){
+        try{
+          if(loginRemember && loginRemember.checked) localStorage.setItem(LOGIN_REMEMBER_KEY,'1');
+          else localStorage.removeItem(LOGIN_REMEMBER_KEY);
+        }catch(_){ }
 
-loginPass.addEventListener('keydown', (e)=>{
-  if(e.key==='Enter') loginBtn.click();
-});
+        loginError.style.display = 'none';
+        loginOverlay.style.display = 'none';
+      } else {
+        loginError.style.display = 'block';
+      }
+    });
 
-// Init
-(async ()=>{
-  await loadAssetSvgs();
-  renderLibrary();
-  setCanvasSize(600,1000);
-  syncControls();
-  renderAll();
-})();
+    loginPass.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter') loginBtn.click();
+    });
 
+    // Init  ✅ (ÄNDERUNG #2: await loadAssetSvgs() statt loadAssetSvgs falsch / anderer Name)
+    (async ()=>{
+      await loadAssetSvgs();
+      renderLibrary();
+      setCanvasSize(600,1000);
+      syncControls();
+      renderAll();
+    })();
 
     try{
       const ok = runTests();
