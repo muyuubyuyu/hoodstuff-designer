@@ -103,20 +103,6 @@
 </head>
 <body>
 
-  <!-- Login Overlay -->
-  <div id="loginOverlay" style="position:fixed;inset:0;background:#0f1115;display:flex;align-items:center;justify-content:center;z-index:9999;">
-    <div style="background:#151a22;border:1px solid #2a3242;border-radius:16px;padding:28px;width:320px;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 60px rgba(0,0,0,.6)">
-      <div style="font-size:18px;font-weight:600;text-align:center">Drucklayout Tool Login</div>
-      <input id="loginUser" type="text" placeholder="Nutzername" style="padding:10px;border-radius:10px;border:1px solid #2a3242;background:#0b0e13;color:#e7eaf0">
-      <input id="loginPass" type="password" placeholder="Passwort" style="padding:10px;border-radius:10px;border:1px solid #2a3242;background:#0b0e13;color:#e7eaf0">
-      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#a5adbd;user-select:none">
-        <input id="loginRemember" type="checkbox" style="width:14px;height:14px;accent-color:#6aa9ff"> Merken
-      </label>
-      <button id="loginBtn" style="padding:10px;border-radius:12px;border:1px solid rgba(106,169,255,.4);background:rgba(106,169,255,.15);color:#e7eaf0;cursor:pointer">Login</button>
-      <div id="loginError" style="font-size:12px;color:#ff5c5c;text-align:center;display:none">Falsche Zugangsdaten</div>
-    </div>
-  </div>
-
   <div class="app">
     <div class="topbar">
       <div class="group chip">
@@ -1251,38 +1237,7 @@
       return true;
     }
 
-    // ===== LOGIN LOGIC (Pseudo Protection) =====
-    const loginOverlay = document.getElementById('loginOverlay');
-    const loginBtn = document.getElementById('loginBtn');
-    const loginUser = document.getElementById('loginUser');
-    const loginPass = document.getElementById('loginPass');
-    const loginError = document.getElementById('loginError');
-    const loginRemember = document.getElementById('loginRemember');
-
-    const LOGIN_REMEMBER_KEY = 'hoodstuffDesignerRemember';
-    try{
-      if(localStorage.getItem(LOGIN_REMEMBER_KEY)==='1'){
-        loginOverlay.style.display = 'none';
-      }
-    }catch(_){ }
-
-    loginBtn.addEventListener('click', ()=>{
-      if(loginUser.value === 'Tine' && loginPass.value === '#gehobenemittelschicht'){
-        try{
-          if(loginRemember && loginRemember.checked) localStorage.setItem(LOGIN_REMEMBER_KEY,'1');
-          else localStorage.removeItem(LOGIN_REMEMBER_KEY);
-        }catch(_){ }
-
-        loginError.style.display = 'none';
-        loginOverlay.style.display = 'none';
-      } else {
-        loginError.style.display = 'block';
-      }
-    });
-
-    loginPass.addEventListener('keydown', (e)=>{
-      if(e.key==='Enter') loginBtn.click();
-    });
+  
 
     // Init  ✅ (ÄNDERUNG #2: await loadAssetSvgs() statt loadAssetSvgs falsch / anderer Name)
     (async ()=>{
