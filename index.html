@@ -38,13 +38,16 @@
     .stageWrap{position:relative;flex:1;overflow:auto;padding:18px;scrollbar-gutter:stable both-edges}
     .stageArea{position:relative;width:max-content;margin:0 auto;padding:22px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
 
-    .stageBg{position:absolute;inset:0;border-radius:12px;background:#cfd6df}
-    .stageShadow{position:absolute;inset:0;border-radius:12px;box-shadow:0 24px 80px rgba(0,0,0,.45);pointer-events:none}
+    /* ✅ FIX: NICHT inset:0, sonst zieht sich der Hintergrund bis rechts "weiter" */
+    .stageBg{position:absolute;top:0;left:0;border-radius:12px;background:#cfd6df}
+    .stageShadow{position:absolute;top:0;left:0;border-radius:12px;box-shadow:0 24px 80px rgba(0,0,0,.45);pointer-events:none}
+
     #canvasSvg{position:relative;display:block;margin:0;border-radius:12px;background:transparent;outline:none}
 
-    .gridOverlay{position:absolute;inset:0;border-radius:12px;pointer-events:none;opacity:.22;display:none}
+    /* ✅ FIX: Overlays ebenfalls nicht inset:0 */
+    .gridOverlay{position:absolute;top:0;left:0;border-radius:12px;pointer-events:none;opacity:.22;display:none}
     .gridOverlay.on{display:block}
-    .marginOverlay{position:absolute;inset:0;border-radius:12px;pointer-events:none;opacity:.95}
+    .marginOverlay{position:absolute;top:0;left:0;border-radius:12px;pointer-events:none;opacity:.95}
 
     .side{grid-row:2;border-left:1px solid var(--line);background:rgba(16,19,26,.75);backdrop-filter:blur(6px);overflow:auto}
     .side .section{padding:14px 12px;border-bottom:1px solid var(--line)}
@@ -109,6 +112,13 @@
       <div style="font-size:18px;font-weight:600;text-align:center">Hoodstuff Drucklayout Tool Admin Login</div>
       <input id="loginUser" type="text" placeholder="Nutzername" style="padding:10px;border-radius:10px;border:1px solid #2a3242;background:#0b0e13;color:#e7eaf0">
       <input id="loginPass" type="password" placeholder="Passwort" style="padding:10px;border-radius:10px;border:1px solid #2a3242;background:#0b0e13;color:#e7eaf0">
+
+      <!-- ✅ Login merken -->
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#a5adbd;">
+        <input id="loginRemember" type="checkbox" style="accent-color:#6aa9ff;">
+        Login merken
+      </label>
+
       <button id="loginBtn" style="padding:10px;border-radius:12px;border:1px solid rgba(106,169,255,.4);background:rgba(106,169,255,.15);color:#e7eaf0;cursor:pointer">Login</button>
       <div id="loginError" style="font-size:12px;color:#ff5c5c;text-align:center;display:none">Falsche Zugangsdaten</div>
     </div>
@@ -391,8 +401,16 @@
 
       els.canvasSvg.style.width = wPx + 'px';
       els.canvasSvg.style.height = hPx + 'px';
+
       els.stageBg.style.width = wPx + 'px';
       els.stageBg.style.height = hPx + 'px';
+
+      /* ✅ FIX: Shadow folgt ebenfalls der Canvas-Größe */
+      const shadowEl = els.stageArea.querySelector('.stageShadow');
+      if(shadowEl){
+        shadowEl.style.width = wPx + 'px';
+        shadowEl.style.height = hPx + 'px';
+      }
 
       els.gridOverlay.style.width = wPx + 'px';
       els.gridOverlay.style.height = hPx + 'px';
@@ -1117,9 +1135,26 @@
     const loginUser = document.getElementById('loginUser');
     const loginPass = document.getElementById('loginPass');
     const loginError = document.getElementById('loginError');
+    const loginRemember = document.getElementById('loginRemember');
+
+    // ✅ Auto-Login, wenn "merken" aktiv war
+    if(localStorage.getItem('hs_admin_authed') === '1'){
+      loginOverlay.style.display = 'none';
+    }
+    if(loginRemember){
+      loginRemember.checked = (localStorage.getItem('hs_admin_authed') === '1');
+    }
 
     loginBtn.addEventListener('click', ()=>{
       if(loginUser.value === 'Tine' && loginPass.value === '#gehobenemittelschicht'){
+        loginError.style.display = 'none';
+
+        if(loginRemember && loginRemember.checked){
+          localStorage.setItem('hs_admin_authed', '1');
+        } else {
+          localStorage.removeItem('hs_admin_authed');
+        }
+
         loginOverlay.style.display = 'none';
       } else {
         loginError.style.display = 'block';
