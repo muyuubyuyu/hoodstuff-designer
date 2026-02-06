@@ -34,17 +34,29 @@
 
     .main{grid-row:2;display:flex;flex-direction:column;min-width:0}
 
-    /* Native scrolling */
-    .stageWrap{position:relative;flex:1;overflow:auto;padding:18px;scrollbar-gutter:stable both-edges}
-    .stageArea{position:relative;width:max-content;margin:0 auto;padding:22px;border-radius:18px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+    /* === Canvas: nur blank, kein UI-Rand, kein rechter "Gutter"-Streifen === */
+    .stageWrap{
+      position:relative;
+      flex:1;
+      overflow:auto;
+      padding:0;
+      scrollbar-gutter:auto;
+      background:transparent;
+    }
+    .stageArea{
+      position:relative;
+      width:max-content;
+      margin:0 auto;
+      padding:0;
+      border:0;
+      background:transparent;
+      border-radius:0;
+    }
 
-    /* ✅ FIX: NICHT inset:0, sonst zieht sich der Hintergrund bis rechts "weiter" */
     .stageBg{position:absolute;top:0;left:0;border-radius:12px;background:#cfd6df}
-    .stageShadow{position:absolute;top:0;left:0;border-radius:12px;box-shadow:0 24px 80px rgba(0,0,0,.45);pointer-events:none}
-
+    .stageShadow{display:none}
     #canvasSvg{position:relative;display:block;margin:0;border-radius:12px;background:transparent;outline:none}
 
-    /* ✅ FIX: Overlays ebenfalls nicht inset:0 */
     .gridOverlay{position:absolute;top:0;left:0;border-radius:12px;pointer-events:none;opacity:.22;display:none}
     .gridOverlay.on{display:block}
     .marginOverlay{position:absolute;top:0;left:0;border-radius:12px;pointer-events:none;opacity:.95}
@@ -113,8 +125,7 @@
       <input id="loginUser" type="text" placeholder="Nutzername" style="padding:10px;border-radius:10px;border:1px solid #2a3242;background:#0b0e13;color:#e7eaf0">
       <input id="loginPass" type="password" placeholder="Passwort" style="padding:10px;border-radius:10px;border:1px solid #2a3242;background:#0b0e13;color:#e7eaf0">
 
-      <!-- ✅ Login merken -->
-      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#a5adbd;">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#a5adbd;user-select:none">
         <input id="loginRemember" type="checkbox" style="accent-color:#6aa9ff;">
         Login merken
       </label>
@@ -263,12 +274,44 @@
       { id:'plz',  name:'PLZ Rauten',                  file:'assets/plz-rauten.svg',                 colorMode:'editable' }
     ];
 
+    // SVG: feste Farben -> currentColor (damit Objektfarbe für ALLE Assets funktioniert)
+    function normalizeSvgToCurrentColor(svgString){
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(svgString, 'image/svg+xml');
+      const svg = doc.documentElement;
+      if(!svg || svg.nodeName.toLowerCase() !== 'svg') return svgString;
+
+      const nodes = svg.querySelectorAll('*');
+      nodes.forEach(el=>{
+        if(el.hasAttribute('fill')){
+          const v = (el.getAttribute('fill') || '').trim();
+          if(v && v.toLowerCase() !== 'none') el.setAttribute('fill', 'currentColor');
+        }
+        if(el.hasAttribute('stroke')){
+          const v = (el.getAttribute('stroke') || '').trim();
+          if(v && v.toLowerCase() !== 'none') el.setAttribute('stroke', 'currentColor');
+        }
+        if(el.hasAttribute('style')){
+          let s = el.getAttribute('style') || '';
+          s = s.replace(/fill\s*:\s*(?!none\b)[^;]+/gi, 'fill: currentColor');
+          s = s.replace(/stroke\s*:\s*(?!none\b)[^;]+/gi, 'stroke: currentColor');
+          el.setAttribute('style', s);
+        }
+      });
+
+      return svg.outerHTML;
+    }
+
     async function loadAssetSvgs(){
       for(const a of ASSETS){
         try{
           const res = await fetch(a.file, { cache:'no-store' });
           if(!res.ok) throw new Error('HTTP ' + res.status);
           a.svg = await res.text();
+
+          if(a.colorMode === 'editable'){
+            a.svg = normalizeSvgToCurrentColor(a.svg);
+          }
         } catch(err){
           console.warn('Asset konnte nicht geladen werden:', a.file, err);
           a.svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60"><rect x="6" y="6" width="108" height="48" rx="10" ry="10" fill="none" stroke="#ff5c5c" stroke-width="4"/><path d="M18 42 L48 18 L68 38 L102 14" fill="none" stroke="#ff5c5c" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -401,16 +444,8 @@
 
       els.canvasSvg.style.width = wPx + 'px';
       els.canvasSvg.style.height = hPx + 'px';
-
       els.stageBg.style.width = wPx + 'px';
       els.stageBg.style.height = hPx + 'px';
-
-      /* ✅ FIX: Shadow folgt ebenfalls der Canvas-Größe */
-      const shadowEl = els.stageArea.querySelector('.stageShadow');
-      if(shadowEl){
-        shadowEl.style.width = wPx + 'px';
-        shadowEl.style.height = hPx + 'px';
-      }
 
       els.gridOverlay.style.width = wPx + 'px';
       els.gridOverlay.style.height = hPx + 'px';
@@ -558,7 +593,11 @@
         svgEl.removeAttribute('height');
         svgEl.setAttribute('width','100%');
         svgEl.setAttribute('height','100%');
-        if(a.colorMode==='editable') svgEl.setAttribute('fill', state.editableFill);
+
+        if(a.colorMode==='editable'){
+          svgEl.style.color = state.editableFill;
+        }
+
         thumb.appendChild(svgEl);
         tile.appendChild(thumb);
 
@@ -634,6 +673,7 @@
 
       const svgEl = parseSvg(a.svg);
       const vb = getViewBoxSize(svgEl);
+
       const item = {
         id: uid(),
         assetId: a.id,
@@ -686,7 +726,8 @@
         w0: it.w0,
         h0: it.h0,
         svgInner: it.svgInner,
-        z: nextZ()
+        z: nextZ(),
+        fill: it.fill
       }));
 
       let dx = 0, dy = 0;
@@ -713,6 +754,7 @@
     function renderAll(){
       els.canvasSvg.innerHTML = '';
       const items = state.items.slice().sort((a,b)=>(a.z||0)-(b.z||0));
+
       for(const it of items){
         const g = document.createElementNS('http://www.w3.org/2000/svg','g');
         g.setAttribute('data-item-id', it.id);
@@ -731,10 +773,15 @@
 
         const inner = document.createElementNS('http://www.w3.org/2000/svg','g');
         inner.innerHTML = it.svgInner;
-        if(it.colorMode==='editable') inner.setAttribute('fill', it.fill || state.editableFill);
+
+        if(it.colorMode === 'editable'){
+          inner.style.color = (it.fill || state.editableFill);
+        }
+
         g.appendChild(inner);
         els.canvasSvg.appendChild(g);
       }
+
       renderLayerList();
       updateSelectionUI();
       updateWarnings();
@@ -1137,7 +1184,7 @@
     const loginError = document.getElementById('loginError');
     const loginRemember = document.getElementById('loginRemember');
 
-    // ✅ Auto-Login, wenn "merken" aktiv war
+    // Auto-Login wenn gemerkt
     if(localStorage.getItem('hs_admin_authed') === '1'){
       loginOverlay.style.display = 'none';
     }
