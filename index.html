@@ -275,32 +275,60 @@
     ];
 
     // SVG: feste Farben -> currentColor (damit Objektfarbe für ALLE Assets funktioniert)
-    function normalizeSvgToCurrentColor(svgString){
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(svgString, 'image/svg+xml');
-      const svg = doc.documentElement;
-      if(!svg || svg.nodeName.toLowerCase() !== 'svg') return svgString;
+function normalizeSvgToCurrentColor(svgString){
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(svgString, 'image/svg+xml');
+  const svg = doc.documentElement;
+  if(!svg || svg.nodeName.toLowerCase() !== 'svg') return svgString;
 
-      const nodes = svg.querySelectorAll('*');
-      nodes.forEach(el=>{
-        if(el.hasAttribute('fill')){
-          const v = (el.getAttribute('fill') || '').trim();
-          if(v && v.toLowerCase() !== 'none') el.setAttribute('fill', 'currentColor');
-        }
-        if(el.hasAttribute('stroke')){
-          const v = (el.getAttribute('stroke') || '').trim();
-          if(v && v.toLowerCase() !== 'none') el.setAttribute('stroke', 'currentColor');
-        }
-        if(el.hasAttribute('style')){
-          let s = el.getAttribute('style') || '';
-          s = s.replace(/fill\s*:\s*(?!none\b)[^;]+/gi, 'fill: currentColor');
-          s = s.replace(/stroke\s*:\s*(?!none\b)[^;]+/gi, 'stroke: currentColor');
-          el.setAttribute('style', s);
-        }
-      });
+  const SKIP = new Set([
+    'svg','defs','clipPath','mask','pattern','linearGradient','radialGradient',
+    'stop','filter','feColorMatrix','feGaussianBlur','feOffset','feBlend',
+    'feComposite','symbol','marker','metadata','title','desc','style','script'
+  ]);
 
-      return svg.outerHTML;
+  const DRAW = new Set([
+    'path','rect','circle','ellipse','polygon','polyline','text','tspan','line'
+  ]);
+
+  svg.querySelectorAll('*').forEach(el=>{
+    const tag = el.nodeName;
+
+    if(SKIP.has(tag)) return;
+
+    // style="fill:...; stroke:...;" -> currentColor (außer none)
+    if(el.hasAttribute('style')){
+      let s = el.getAttribute('style') || '';
+      s = s.replace(/fill\s*:\s*(?!none\b)[^;]+/gi, 'fill: currentColor');
+      s = s.replace(/stroke\s*:\s*(?!none\b)[^;]+/gi, 'stroke: currentColor');
+      el.setAttribute('style', s);
     }
+
+    // fill="" vorhanden -> currentColor (außer none)
+    if(el.hasAttribute('fill')){
+      const v = (el.getAttribute('fill') || '').trim().toLowerCase();
+      if(v && v !== 'none') el.setAttribute('fill', 'currentColor');
+    } else {
+      // kein fill gesetzt: bei zeichnenden Elementen fill ergänzen
+      if(DRAW.has(tag)){
+        // aber nicht, wenn explizit per style fill:none o.ä. gesetzt ist (lassen wir so)
+        const s = (el.getAttribute('style') || '').toLowerCase();
+        if(!s.includes('fill: none')){
+          el.setAttribute('fill', 'currentColor');
+        }
+      }
+    }
+
+    // stroke="" vorhanden -> currentColor (außer none)
+    if(el.hasAttribute('stroke')){
+      const v = (el.getAttribute('stroke') || '').trim().toLowerCase();
+      if(v && v !== 'none') el.setAttribute('stroke', 'currentColor');
+    }
+  });
+
+  return svg.outerHTML;
+}
+
 
     async function loadAssetSvgs(){
       for(const a of ASSETS){
