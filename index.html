@@ -16,15 +16,42 @@
       --good:#34d399;
     }
     *{box-sizing:border-box}
-    body{margin:0;background:linear-gradient(180deg,#0b0e13,#0f1115);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial;height:100vh;overflow:hidden}
+    body{
+      margin:0;
+      background:linear-gradient(180deg,#0b0e13,#0f1115);
+      color:var(--text);
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial;
+      height:100vh;
+      overflow:hidden
+    }
 
     .app{display:grid;grid-template-columns:1fr 340px;grid-template-rows:auto 1fr;height:100vh}
 
-    .topbar{grid-column:1/-1;grid-row:1;display:flex;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);background:rgba(16,19,26,.85);backdrop-filter:blur(6px);position:relative;z-index:50}
+    .topbar{
+      grid-column:1/-1;
+      grid-row:1;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      padding:10px 12px;
+      border-bottom:1px solid var(--line);
+      background:rgba(16,19,26,.85);
+      backdrop-filter:blur(6px);
+      position:relative;
+      z-index:50
+    }
     .topbar .group{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .chip{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);background:rgba(21,26,34,.9);border-radius:12px;color:var(--text)}
     .chip label{color:var(--muted);font-size:12px}
-    input[type="number"], input[type="text"], select{background:rgba(10,14,20,.8);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:8px 10px;outline:none;min-width:70px}
+    input[type="number"], input[type="text"], select{
+      background:rgba(10,14,20,.8);
+      color:var(--text);
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:8px 10px;
+      outline:none;
+      min-width:70px
+    }
     input[type="color"]{width:36px;height:30px;border-radius:10px;border:1px solid var(--line);background:transparent;padding:0;overflow:hidden}
     button{background:rgba(106,169,255,.15);border:1px solid rgba(106,169,255,.35);color:var(--text);border-radius:12px;padding:8px 10px;cursor:pointer;user-select:none}
     button:hover{background:rgba(106,169,255,.22)}
@@ -34,7 +61,7 @@
 
     .main{grid-row:2;display:flex;flex-direction:column;min-width:0}
 
-    /* === Canvas: nur blank, kein UI-Rand, kein rechter "Gutter"-Streifen === */
+    /* === Canvas UI: blank, kein Rand, kein scrollbar-gutter Streifen === */
     .stageWrap{
       position:relative;
       flex:1;
@@ -53,13 +80,13 @@
       border-radius:0;
     }
 
-    .stageBg{position:absolute;top:0;left:0;border-radius:12px;background:#cfd6df}
+    .stageBg{position:absolute;inset:0;border-radius:12px;background:#cfd6df}
     .stageShadow{display:none}
     #canvasSvg{position:relative;display:block;margin:0;border-radius:12px;background:transparent;outline:none}
 
-    .gridOverlay{position:absolute;top:0;left:0;border-radius:12px;pointer-events:none;opacity:.22;display:none}
+    .gridOverlay{position:absolute;inset:0;border-radius:12px;pointer-events:none;opacity:.22;display:none}
     .gridOverlay.on{display:block}
-    .marginOverlay{position:absolute;top:0;left:0;border-radius:12px;pointer-events:none;opacity:.95}
+    .marginOverlay{position:absolute;inset:0;border-radius:12px;pointer-events:none;opacity:.95}
 
     .side{grid-row:2;border-left:1px solid var(--line);background:rgba(16,19,26,.75);backdrop-filter:blur(6px);overflow:auto}
     .side .section{padding:14px 12px;border-bottom:1px solid var(--line)}
@@ -125,8 +152,8 @@
       <input id="loginUser" type="text" placeholder="Nutzername" style="padding:10px;border-radius:10px;border:1px solid #2a3242;background:#0b0e13;color:#e7eaf0">
       <input id="loginPass" type="password" placeholder="Passwort" style="padding:10px;border-radius:10px;border:1px solid #2a3242;background:#0b0e13;color:#e7eaf0">
 
-      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#a5adbd;user-select:none">
-        <input id="loginRemember" type="checkbox" style="accent-color:#6aa9ff;">
+      <label style="display:inline-flex;align-items:center;gap:8px;font-size:12px;color:#a5adbd;user-select:none">
+        <input id="loginRemember" type="checkbox">
         Login merken
       </label>
 
@@ -262,73 +289,50 @@
 
   <script>
     // Assets (SVG-Dateien aus /assets laden)
-    // Repo-Struktur:
-    //  index.html
-    //  assets/
-    //    all-colognians-are-beautiful.svg
-    //    hoodstufff-logo.svg
-    //    plz-rauten.svg
     const ASSETS = [
       { id:'col',  name:'All Colognians Are Beautiful', file:'assets/all-colognians-are-beautiful.svg', colorMode:'editable' },
       { id:'hood', name:'Hoodstuff Logo',              file:'assets/hoodstufff-logo.svg',             colorMode:'editable' },
       { id:'plz',  name:'PLZ Rauten',                  file:'assets/plz-rauten.svg',                 colorMode:'editable' }
     ];
 
-    // SVG: feste Farben -> currentColor (damit Objektfarbe für ALLE Assets funktioniert)
-function normalizeSvgToCurrentColor(svgString){
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(svgString, 'image/svg+xml');
-  const svg = doc.documentElement;
-  if(!svg || svg.nodeName.toLowerCase() !== 'svg') return svgString;
+    // Illustrator-SVGs: Farbe kommt oft über <style> .st0 { fill:#... }
+    // -> auf currentColor umbiegen (fill/stroke), "none" und "url(#...)" lassen wir in Ruhe.
+    function normalizeSvgToCurrentColor(svgString){
+      // <style> ... </style> rewriten
+      svgString = svgString.replace(/<style\b[^>]*>([\s\S]*?)<\/style>/gi, (m, css)=>{
+        const out = css
+          .replace(/fill\s*:\s*(?!none\b)(?!url\()[^;]+/gi, 'fill: currentColor')
+          .replace(/stroke\s*:\s*(?!none\b)(?!url\()[^;]+/gi, 'stroke: currentColor');
+        return m.replace(css, out);
+      });
 
-  const SKIP = new Set([
-    'svg','defs','clipPath','mask','pattern','linearGradient','radialGradient',
-    'stop','filter','feColorMatrix','feGaussianBlur','feOffset','feBlend',
-    'feComposite','symbol','marker','metadata','title','desc','style','script'
-  ]);
+      // Attribute / inline styles rewriten
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(svgString, 'image/svg+xml');
+      const svg = doc.documentElement;
+      if(!svg || svg.nodeName.toLowerCase() !== 'svg') return svgString;
 
-  const DRAW = new Set([
-    'path','rect','circle','ellipse','polygon','polyline','text','tspan','line'
-  ]);
-
-  svg.querySelectorAll('*').forEach(el=>{
-    const tag = el.nodeName;
-
-    if(SKIP.has(tag)) return;
-
-    // style="fill:...; stroke:...;" -> currentColor (außer none)
-    if(el.hasAttribute('style')){
-      let s = el.getAttribute('style') || '';
-      s = s.replace(/fill\s*:\s*(?!none\b)[^;]+/gi, 'fill: currentColor');
-      s = s.replace(/stroke\s*:\s*(?!none\b)[^;]+/gi, 'stroke: currentColor');
-      el.setAttribute('style', s);
-    }
-
-    // fill="" vorhanden -> currentColor (außer none)
-    if(el.hasAttribute('fill')){
-      const v = (el.getAttribute('fill') || '').trim().toLowerCase();
-      if(v && v !== 'none') el.setAttribute('fill', 'currentColor');
-    } else {
-      // kein fill gesetzt: bei zeichnenden Elementen fill ergänzen
-      if(DRAW.has(tag)){
-        // aber nicht, wenn explizit per style fill:none o.ä. gesetzt ist (lassen wir so)
-        const s = (el.getAttribute('style') || '').toLowerCase();
-        if(!s.includes('fill: none')){
-          el.setAttribute('fill', 'currentColor');
+      svg.querySelectorAll('*').forEach(el=>{
+        if(el.hasAttribute('style')){
+          let s = el.getAttribute('style') || '';
+          s = s.replace(/fill\s*:\s*(?!none\b)(?!url\()[^;]+/gi, 'fill: currentColor');
+          s = s.replace(/stroke\s*:\s*(?!none\b)(?!url\()[^;]+/gi, 'stroke: currentColor');
+          el.setAttribute('style', s);
         }
-      }
+        if(el.hasAttribute('fill')){
+          const v = (el.getAttribute('fill') || '').trim();
+          const vl = v.toLowerCase();
+          if(v && vl !== 'none' && !vl.startsWith('url(')) el.setAttribute('fill', 'currentColor');
+        }
+        if(el.hasAttribute('stroke')){
+          const v = (el.getAttribute('stroke') || '').trim();
+          const vl = v.toLowerCase();
+          if(v && vl !== 'none' && !vl.startsWith('url(')) el.setAttribute('stroke', 'currentColor');
+        }
+      });
+
+      return svg.outerHTML;
     }
-
-    // stroke="" vorhanden -> currentColor (außer none)
-    if(el.hasAttribute('stroke')){
-      const v = (el.getAttribute('stroke') || '').trim().toLowerCase();
-      if(v && v !== 'none') el.setAttribute('stroke', 'currentColor');
-    }
-  });
-
-  return svg.outerHTML;
-}
-
 
     async function loadAssetSvgs(){
       for(const a of ASSETS){
@@ -336,7 +340,6 @@ function normalizeSvgToCurrentColor(svgString){
           const res = await fetch(a.file, { cache:'no-store' });
           if(!res.ok) throw new Error('HTTP ' + res.status);
           a.svg = await res.text();
-
           if(a.colorMode === 'editable'){
             a.svg = normalizeSvgToCurrentColor(a.svg);
           }
@@ -361,8 +364,8 @@ function normalizeSvgToCurrentColor(svgString){
       gridStep: 5,
       snapGrid: false,
       bgColor: '#cfd6df',
-      editableFill: '#000000',
-      items: [],
+      editableFill: '#000000',        // Default-Farbe (für Preview & neue Objekte)
+      items: [],                      // Jedes Canvas-Objekt bekommt seine eigene it.fill
       selection: new Set(),
       history: []
     };
@@ -441,8 +444,8 @@ function normalizeSvgToCurrentColor(svgString){
       state.snapGrid = prev.snapGrid;
       state.bgColor = prev.bgColor || state.bgColor;
       state.editableFill = prev.editableFill || state.editableFill;
-      state.items = prev.items;
-      state.selection = new Set(prev.selection);
+      state.items = prev.items || [];
+      state.selection = new Set(prev.selection || []);
       syncControls();
       renderAll();
     }
@@ -606,6 +609,7 @@ function normalizeSvgToCurrentColor(svgString){
       return { w: parts[2] || 0, h: parts[3] || 0 };
     }
 
+    // Preview: immer global nach state.editableFill
     function renderLibrary(){
       els.library.innerHTML = '';
       for(const a of ASSETS){
@@ -622,7 +626,8 @@ function normalizeSvgToCurrentColor(svgString){
         svgEl.setAttribute('width','100%');
         svgEl.setAttribute('height','100%');
 
-        if(a.colorMode==='editable'){
+        if(a.colorMode === 'editable'){
+          // currentColor wird über CSS color gesteuert
           svgEl.style.color = state.editableFill;
         }
 
@@ -714,7 +719,9 @@ function normalizeSvgToCurrentColor(svgString){
         w0: vb.w,
         h0: vb.h,
         svgInner: svgEl.innerHTML,
-        z: nextZ()
+        z: nextZ(),
+        // Wichtig: Canvas-Objekte haben eigene Farbe (damit der Picker NICHT alle Canvas-Objekte mitzieht)
+        fill: (a.colorMode === 'editable') ? state.editableFill : undefined
       };
 
       const targetW = 120;
@@ -782,7 +789,6 @@ function normalizeSvgToCurrentColor(svgString){
     function renderAll(){
       els.canvasSvg.innerHTML = '';
       const items = state.items.slice().sort((a,b)=>(a.z||0)-(b.z||0));
-
       for(const it of items){
         const g = document.createElementNS('http://www.w3.org/2000/svg','g');
         g.setAttribute('data-item-id', it.id);
@@ -803,17 +809,18 @@ function normalizeSvgToCurrentColor(svgString){
         inner.innerHTML = it.svgInner;
 
         if(it.colorMode === 'editable'){
-          inner.style.color = (it.fill || state.editableFill);
+          // Fallback für alte Items
+          if(!it.fill) it.fill = state.editableFill;
+          inner.style.color = it.fill;
         }
 
         g.appendChild(inner);
         els.canvasSvg.appendChild(g);
       }
-
       renderLayerList();
       updateSelectionUI();
       updateWarnings();
-      renderLibrary();
+      renderLibrary(); // Preview immer aktuell
     }
 
     function renderLayerList(){
@@ -1098,14 +1105,22 @@ function normalizeSvgToCurrentColor(svgString){
       els.stageBg.style.background = state.bgColor;
     });
 
+    // Objektfarbe:
+    // - Preview (Bibliothek) ändert immer global (state.editableFill)
+    // - Canvas ändert nur das ausgewählte Objekt (wenn exakt 1 selektiert)
     els.objColor.addEventListener('input', ()=>{
       state.editableFill = els.objColor.value;
+
+      // Preview immer global
+      renderLibrary();
+
+      // Canvas: nur bei exakt 1 Auswahl
       const sel = state.items.filter(it=>state.selection.has(it.id));
-      if(sel.length===1 && sel[0].colorMode==='editable'){
+      if(sel.length === 1 && sel[0].colorMode === 'editable'){
         pushHistory();
         sel[0].fill = state.editableFill;
+        renderAll();
       }
-      renderAll();
     });
 
     els.delBtn.addEventListener('click', deleteSelection);
@@ -1212,22 +1227,21 @@ function normalizeSvgToCurrentColor(svgString){
     const loginError = document.getElementById('loginError');
     const loginRemember = document.getElementById('loginRemember');
 
-    // Auto-Login wenn gemerkt
-    if(localStorage.getItem('hs_admin_authed') === '1'){
+    const AUTH_KEY = 'hs_admin_authed_v1';
+
+    if(localStorage.getItem(AUTH_KEY) === '1'){
       loginOverlay.style.display = 'none';
-    }
-    if(loginRemember){
-      loginRemember.checked = (localStorage.getItem('hs_admin_authed') === '1');
+      loginRemember.checked = true;
     }
 
     loginBtn.addEventListener('click', ()=>{
       if(loginUser.value === 'Tine' && loginPass.value === '#gehobenemittelschicht'){
         loginError.style.display = 'none';
 
-        if(loginRemember && loginRemember.checked){
-          localStorage.setItem('hs_admin_authed', '1');
+        if(loginRemember.checked){
+          localStorage.setItem(AUTH_KEY, '1');
         } else {
-          localStorage.removeItem('hs_admin_authed');
+          localStorage.removeItem(AUTH_KEY);
         }
 
         loginOverlay.style.display = 'none';
@@ -1240,7 +1254,7 @@ function normalizeSvgToCurrentColor(svgString){
       if(e.key==='Enter') loginBtn.click();
     });
 
-    // Init (async, damit /assets geladen werden)
+    // Init
     (async ()=>{
       await loadAssetSvgs();
       renderLibrary();
